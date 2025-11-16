@@ -12,6 +12,7 @@ import org.piotrowski.cardureadoo.infrastructure.persistence.jpa.repositories.Of
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -28,8 +29,8 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
     @Transactional
     public void save(Offer offer) {
         var card = cardJpa.findByExpansionExternalIdAndCardNumber(
-                    offer.getExpansionExternalId().value(),
-                        offer.getCardNumber().value())
+                    offer.getExpansionId().value(),
+                    offer.getCardNumber().value())
                 .orElseThrow(() -> new IllegalStateException("Card not found for offer"));
 
         var entity = mapper.toEntity(offer);
@@ -56,5 +57,19 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
                 .map(CardEntity::getId)
                 .map(offerJpa::findTopByCardIdOrderByListedAtDesc)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OfferStats stats(ExpansionExternalId expId, CardNumber number, Instant from, Instant to) {
+        var cardId = cardJpa.findByExpansionExternalIdAndCardNumber(expId.value(), number.value())
+                .map(CardEntity::getId)
+                .orElseThrow(() -> new IllegalStateException("Card not found"));
+
+        var p = offerJpa.statsForCardInRange(cardId, from, to);
+        if (p == null || p.getCnt() == 0) {
+            return new OfferStats(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0L);
+        }
+        return new OfferStats(p.getMin(), p.getMax(), p.getAvg(), p.getCnt());
     }
 }

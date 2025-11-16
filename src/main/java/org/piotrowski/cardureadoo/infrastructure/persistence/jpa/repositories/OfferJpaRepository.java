@@ -4,6 +4,7 @@ import org.piotrowski.cardureadoo.infrastructure.persistence.jpa.entities.OfferE
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -30,5 +31,8 @@ public interface OfferJpaRepository extends JpaRepository<OfferEntity, Long> {
             from  OfferEntity  o
             where o.card.id = :cardId and o.listedAt between  :from and :to
                     """)
-    OfferStats statsForCardInRange(Long cardId, Instant from, Instant to);
+    OfferStats statsForCardInRange(
+            @Param("cardId") Long cardId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
 }

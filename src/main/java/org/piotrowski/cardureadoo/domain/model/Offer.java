@@ -1,22 +1,40 @@
 package org.piotrowski.cardureadoo.domain.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.piotrowski.cardureadoo.domain.model.value.card.CardNumber;
 import org.piotrowski.cardureadoo.domain.model.value.expansion.ExpansionExternalId;
 import org.piotrowski.cardureadoo.domain.model.value.offer.Money;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Getter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-public class Offer {
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PUBLIC)
+@NoArgsConstructor(access =  AccessLevel.PUBLIC)
+public final class Offer {
     private CardNumber cardNumber;
-    private ExpansionExternalId expansionExternalId;
-    private Money money;
+    private ExpansionExternalId expansionId;
+    private Money price;
     private Instant listedAt;
+
+    public static Offer of(
+            ExpansionExternalId expansionId,
+            CardNumber cardNumber,
+            Money price,
+            Instant listedAt
+    ) {
+        var when = (listedAt != null) ? listedAt : Instant.now();
+        Objects.requireNonNull(expansionId, "expansionId");
+        Objects.requireNonNull(cardNumber, "cardNumber");
+        Objects.requireNonNull(price, "price");
+
+        return  Offer.builder()
+                .expansionId(expansionId)
+                .cardNumber(cardNumber)
+                .price(price)
+                .listedAt(when)
+                .build();
+    }
+
 }

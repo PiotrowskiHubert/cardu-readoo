@@ -40,10 +40,10 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     @Override
     @Transactional
     public Card save(Card card) {
-        var exp = expansionJpa.findByExternalId(card.getExpansion().getId().value())
-                .orElseThrow(() -> new IllegalStateException("Expansion not found: " + card.getExpansion().getId().value()));
+        var exp = expansionJpa.findByExternalId(card.getExpansionId().value())
+                .orElseThrow(() -> new IllegalStateException("Expansion not found: " + card.getExpansionId().value()));
 
-        var existing = cardJpa.findByExpansionExternalIdAndCardNumber(card.getExpansion().getId().value(), card.getNumber().value());
+        var existing = cardJpa.findByExpansionExternalIdAndCardNumber(card.getExpansionId().value(), card.getNumber().value());
 
         if (existing.isPresent()) {
             var e = existing.get();
@@ -58,7 +58,7 @@ public class CardJpaRepositoryAdapter implements CardRepository {
             return mapper.toDomain(cardJpa.save(entity));
         } catch (DataIntegrityViolationException dup) {
             return cardJpa.findByExpansionExternalIdAndCardNumber(
-                            card.getExpansion().getId().value(), card.getNumber().value())
+                            card.getExpansionId().value(), card.getNumber().value())
                     .map(mapper::toDomain)
                     .orElseThrow(() -> dup);
         }
