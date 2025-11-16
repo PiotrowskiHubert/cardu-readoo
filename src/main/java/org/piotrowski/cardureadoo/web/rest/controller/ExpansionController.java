@@ -27,4 +27,22 @@ public class ExpansionController {
     public ResponseEntity<Boolean> exists(@RequestParam @NotBlank String externalId) {
         return ResponseEntity.ok(expansionService.exists(externalId));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Integer> deleteById(@PathVariable Long id) {
+        int removed = expansionService.deleteById(id);
+        return ResponseEntity.ok(removed);
+    }
+
+    @DeleteMapping("/by-external/{externalId}")
+    public ResponseEntity<Integer> deleteByExternal(@PathVariable String externalId) {
+        int removed = expansionService.deleteByExternalId(externalId);
+        return ResponseEntity.ok(removed);
+    }
+
+    @DeleteMapping("/by-name/{name}")
+    public ResponseEntity<Integer> deleteByName(@PathVariable String name) {
+        int removed = expansionService.deleteByName(name);
+        return ResponseEntity.ok(removed);
+    }
 }

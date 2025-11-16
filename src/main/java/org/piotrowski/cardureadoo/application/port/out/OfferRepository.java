@@ -13,6 +13,9 @@ public interface OfferRepository {
     void save(Offer offer);
     List<Offer> find(ExpansionExternalId expId, CardNumber number, Instant from, Instant to);
     Optional<Offer> findLast(ExpansionExternalId expId, CardNumber number);
+    void deleteById(Long id);
+    void deleteByCardId(Long cardId);
+    void deleteByCardIds(List<Long> cardIds);
 
     OfferStats stats(ExpansionExternalId expId, CardNumber number, Instant from, Instant to);
 

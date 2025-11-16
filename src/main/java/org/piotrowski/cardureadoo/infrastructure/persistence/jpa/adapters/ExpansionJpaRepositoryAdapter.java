@@ -9,6 +9,7 @@ import org.piotrowski.cardureadoo.infrastructure.persistence.jpa.repositories.Ex
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -35,4 +36,19 @@ public class ExpansionJpaRepositoryAdapter implements ExpansionRepository {
         var entity = mapper.toEntity(expansion);
         return mapper.toDomain(expansionJpa.save(entity));
     }
+
+    @Override public Optional<Expansion> findById(Long id) {
+        return expansionJpa.findById(id).map(mapper::toDomain);
+    }
+
+    @Override public List<String> findExternalIdsByName(String name) {
+        return expansionJpa.findIdsByName(name).stream()
+                .map(Object::toString)
+                .toList();
+    }
+
+    @Override public int deleteById(Long id) { expansionJpa.deleteByIdExplicit(id); return 1; }
+
+    @Override public int deleteByExternalId(String externalId) { return expansionJpa.deleteByExternalId(externalId); }
+
 }

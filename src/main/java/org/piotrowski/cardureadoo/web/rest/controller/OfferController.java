@@ -73,4 +73,10 @@ public class OfferController {
         var stats = offerService.getStats(expExternalId, cardNumber, from, to);
         return ResponseEntity.ok(mapper.toResponse(stats));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteById(@PathVariable Long id) {
+        offerService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
 }

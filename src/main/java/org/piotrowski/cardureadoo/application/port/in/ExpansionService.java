@@ -16,5 +16,14 @@ public interface ExpansionService {
     @Transactional(readOnly = true)
     boolean exists(String externalId);
 
+    @Transactional
+    int deleteById(Long id);
+
+    @Transactional
+    int deleteByExternalId(String externalId);
+
+    @Transactional
+    int deleteByName(String name);
+
     record UpsertExpansionCommand(String externalId, String name) {}
 }

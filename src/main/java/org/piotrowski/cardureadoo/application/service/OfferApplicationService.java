@@ -88,4 +88,10 @@ public class OfferApplicationService implements OfferService {
         final var s = offerRepository.stats(expId, num, f, t);
         return new OfferStatsDto(s.min(), s.max(), s.avg(), s.count());
     }
+
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+        offerRepository.deleteById(id);
+    }
 }

@@ -21,6 +21,9 @@ public interface OfferService {
     @Transactional(readOnly = true)
     OfferStatsDto getStats(String expExternalId, String cardNumber, Instant from, Instant to);
 
+    @Transactional
+    void deleteById(Long id);
+
     public record AddOfferCommand(
             String expExternalId,
             String cardNumber,

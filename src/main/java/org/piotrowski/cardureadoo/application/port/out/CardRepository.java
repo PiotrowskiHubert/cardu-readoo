@@ -11,8 +11,12 @@ public interface CardRepository {
     Optional<Card> find(ExpansionExternalId expId, CardNumber number);
     boolean exists(ExpansionExternalId expId, CardNumber number);
     Card save(Card card);
-
-    // nowo dodane operacje listujące
-    List<Card> findAll();
-    List<Card> findByExpansion(ExpansionExternalId expId);
+    List<Card> listAll(int page, int size);
+    List<Card> listByExpansion(ExpansionExternalId expId, int page, int size);
+    List<Card> searchByName(String query, int page, int size);
+    void deleteById(Long id);
+    Optional<Long> findIdByExpansionAndNumber(String expExternalId, String cardNumber);
+    List<Long> findIdsByExpansionAndName(String expExternalId, String cardName);
+    int deleteByIds(List<Long> ids);
+    List<Long> findIdsByExpansion(String expExternalId);
 }

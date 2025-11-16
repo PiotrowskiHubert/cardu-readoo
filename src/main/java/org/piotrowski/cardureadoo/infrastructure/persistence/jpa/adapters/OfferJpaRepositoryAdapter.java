@@ -72,4 +72,21 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
         }
         return new OfferStats(p.getMin(), p.getMax(), p.getAvg(), p.getCnt());
     }
+
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+        offerJpa.deleteByIdExplicit(id);
+    }
+
+    @Override
+    public void deleteByCardId(Long cardId) {
+        offerJpa.deleteByCardId(cardId);
+    }
+
+    @Override
+    public void deleteByCardIds(List<Long> cardIds) {
+        if (cardIds == null || cardIds.isEmpty()) return;
+        offerJpa.deleteByCardIds(cardIds);
+    }
 }
