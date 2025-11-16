@@ -43,5 +43,5 @@ public class CardApplicationService implements CardService {
         return cardRepository.exists(new ExpansionExternalId(expExternalId), new CardNumber(cardNumber));
     }
 
-    public record UpsertCardCommand(String expExternalId, String cardNumber, String cardName, String cardRarity) {}
+//    public record UpsertCardCommand(String expExternalId, String cardNumber, String cardName, String cardRarity) {}
 }

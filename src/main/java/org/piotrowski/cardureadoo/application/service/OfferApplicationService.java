@@ -33,12 +33,12 @@ public class OfferApplicationService implements OfferService {
     public void addOffer(AddOfferCommand cmd) {
         Objects.requireNonNull(cmd, "cmd");
 
-        final var expId = new ExpansionExternalId(cmd.expExternalId);
-        final var cardNumber = new CardNumber(cmd.cardNumber);
+        final var expId = new ExpansionExternalId(cmd.expExternalId());
+        final var cardNumber = new CardNumber(cmd.cardNumber());
         final var when = cmd.listedAt() != null ? cmd.listedAt() : Instant.now();
         final var currency = (cmd.currency() == null || cmd.currency().isBlank()) ? "PLN" : cmd.currency();
         final var price =  new Money(new BigDecimal(cmd.amount()), currency);
-        final var rarity = new CardRarity(cmd.cardRarity);
+        final var rarity = new CardRarity(cmd.cardRarity());
 
         if (!cardRepository.exists(expId, cardNumber)) {
             final var name = cmd.cardName() != null ? new CardName(cmd.cardName()) : new CardName("UNKNOWN");
@@ -88,28 +88,4 @@ public class OfferApplicationService implements OfferService {
         final var s = offerRepository.stats(expId, num, f, t);
         return new OfferStatsDto(s.min(), s.max(), s.avg(), s.count());
     }
-
-    public record AddOfferCommand(
-            String expExternalId,
-            String cardNumber,
-            String amount,
-            String currency,
-            Instant listedAt,
-//            Long userId
-            String cardName,
-            String cardRarity
-    ) {}
-
-    public record OfferPointDto(
-            Instant listedAt,
-            BigDecimal amount,
-            String currency
-    ) {}
-
-    public  record OfferStatsDto(
-            BigDecimal min,
-            BigDecimal  max,
-            BigDecimal avg,
-            long count
-    ) {}
 }

@@ -15,4 +15,6 @@ public interface ExpansionService {
 
     @Transactional(readOnly = true)
     boolean exists(String externalId);
+
+    record UpsertExpansionCommand(String externalId, String name) {}
 }

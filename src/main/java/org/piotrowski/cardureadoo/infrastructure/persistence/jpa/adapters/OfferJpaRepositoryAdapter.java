@@ -33,7 +33,7 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
                     offer.getCardNumber().value())
                 .orElseThrow(() -> new IllegalStateException("Card not found for offer"));
 
-        var entity = mapper.toEntity(offer);
+        var entity = mapper.toEntity(offer, card);
         entity.referTo(card);
         offerJpa.save(entity);
     }

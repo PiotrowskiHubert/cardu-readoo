@@ -39,5 +39,5 @@ public class ExpansionApplicationService implements ExpansionService {
         return expansionRepository.existsByExternalId(new ExpansionExternalId(externalId));
     }
 
-    public record UpsertExpansionCommand(String externalId, String name) {}
+//    public record UpsertExpansionCommand(String externalId, String name) {}
 }
