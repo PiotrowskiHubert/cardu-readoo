@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.piotrowski.cardureadoo.application.port.in.CardService;
 import org.piotrowski.cardureadoo.web.dto.card.CardDtoMapper;
 import org.piotrowski.cardureadoo.web.dto.card.CardResponse;
+import org.piotrowski.cardureadoo.web.dto.card.PatchCardRequest;
 import org.piotrowski.cardureadoo.web.dto.card.UpsertCardRequest;
 import org.springframework.http.ResponseEntity;
 import org.piotrowski.cardureadoo.application.port.in.CardService.UpsertCardCommand;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/cards")
+@RequestMapping(value = "/api/expansions/{expId}/cards", produces = "application/json")
 @RequiredArgsConstructor
 @Validated
 public class CardController {
@@ -83,5 +84,14 @@ public class CardController {
             @RequestParam("name") String cardName) {
         int removed = cardService.deleteByExpansionAndName(expExternalId, cardName);
         return ResponseEntity.ok(removed);
+    }
+
+    @PatchMapping(path = "/{cardNumber}", consumes = "application/json")
+    public ResponseEntity<Void> patch(@PathVariable String expId, @PathVariable String cardNumber, @RequestBody PatchCardRequest req) {
+        if (req == null || (req.name() == null && req.rarity() == null)) {
+            return ResponseEntity.badRequest().build();
+        }
+        cardService.patch(expId, cardNumber, new CardService.PatchCardCommand(req.name(), req.rarity()));
+        return ResponseEntity.noContent().build();
     }
 }

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.piotrowski.cardureadoo.application.port.in.ExpansionService;
+import org.piotrowski.cardureadoo.web.dto.expansion.PatchExpansionRequest;
 import org.piotrowski.cardureadoo.web.dto.expansion.UpsertExpansionRequest;
 import org.piotrowski.cardureadoo.application.port.in.ExpansionService.UpsertExpansionCommand;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +12,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/expansions")
+@RequestMapping(value = "/api/expansions", produces = "application/json")
 @RequiredArgsConstructor
 @Validated
 public class ExpansionController {
@@ -44,5 +45,14 @@ public class ExpansionController {
     public ResponseEntity<Integer> deleteByName(@PathVariable String name) {
         int removed = expansionService.deleteByName(name);
         return ResponseEntity.ok(removed);
+    }
+
+    @PatchMapping(path = "/{externalId}", consumes = "application/json")
+    public ResponseEntity<Void> patch(@PathVariable String externalId, @RequestBody PatchExpansionRequest req) {
+        if (req == null || (req.name() == null)) {
+            return ResponseEntity.badRequest().build();
+        }
+        expansionService.patch(externalId, new ExpansionService.PatchExpansionCommand(req.name()));
+        return ResponseEntity.noContent().build();
     }
 }

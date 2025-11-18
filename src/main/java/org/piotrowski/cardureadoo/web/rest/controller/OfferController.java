@@ -4,10 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.piotrowski.cardureadoo.application.port.in.OfferService;
-import org.piotrowski.cardureadoo.web.dto.offer.AddOfferRequest;
-import org.piotrowski.cardureadoo.web.dto.offer.OfferDtoMapper;
-import org.piotrowski.cardureadoo.web.dto.offer.OfferPointResponse;
-import org.piotrowski.cardureadoo.web.dto.offer.OfferStatsResponse;
+import org.piotrowski.cardureadoo.web.dto.offer.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -18,7 +15,7 @@ import java.time.Instant;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/offers")
+@RequestMapping(value = "/api/offers", produces = "application/json")
 @RequiredArgsConstructor
 @Validated
 public class OfferController {
@@ -77,6 +74,18 @@ public class OfferController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteById(@PathVariable Long id) {
         offerService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping(path = "/{offerId}", consumes = "application/json")
+    public ResponseEntity<Void> patch(@PathVariable long offerId,
+                                      @RequestBody PatchOfferRequest req) {
+        if (req == null || (req.amount() == null && req.currency() == null && req.listedAt() == null)) {
+            return ResponseEntity.badRequest().build();
+        }
+        offerService.patch(offerId, new OfferService.PatchOfferCommand(
+                req.amount(), req.currency(), req.listedAt()
+        ));
         return ResponseEntity.noContent().build();
     }
 }
