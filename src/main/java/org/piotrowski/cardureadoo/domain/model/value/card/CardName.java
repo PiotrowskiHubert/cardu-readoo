@@ -9,5 +9,4 @@ public record CardName(String value) {
     public String normalized() {
         return value;
     }
-
 }

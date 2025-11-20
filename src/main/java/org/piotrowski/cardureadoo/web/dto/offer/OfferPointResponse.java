@@ -4,7 +4,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 public record OfferPointResponse(
-    Instant listedAt,
-    BigDecimal amount,
-    String currency
+        Long id,
+        Instant listedAt,
+        BigDecimal amount,
+        String currency
 ) { }

@@ -31,25 +31,19 @@ public class OfferApplicationService implements OfferService {
     @Transactional
     @Override
     public void addOffer(AddOfferCommand cmd) {
-        Objects.requireNonNull(cmd, "cmd");
-
         final var expId = new ExpansionExternalId(cmd.expExternalId());
         final var cardNumber = new CardNumber(cmd.cardNumber());
         final var when = cmd.listedAt() != null ? cmd.listedAt() : Instant.now();
         final var currency = (cmd.currency() == null || cmd.currency().isBlank()) ? "PLN" : cmd.currency();
-        final var price =  new Money(new BigDecimal(cmd.amount()), currency);
+        final var price = Money.of(new BigDecimal(cmd.amount()), currency);
         final var rarity = new CardRarity(cmd.cardRarity());
 
         if (!cardRepository.exists(expId, cardNumber)) {
             final var name = cmd.cardName() != null ? new CardName(cmd.cardName()) : new CardName("UNKNOWN");
-//            final var expansion = expansionRepository.findByExternalId(expId).orElseThrow((() -> new IllegalStateException("Expansion not found: " + expId)));
-//            final var card = new Card(name, rarity, cardNumber, expId);
-            final var card = Card.of(name, rarity, cardNumber, expId);
-            cardRepository.save(card);
+            cardRepository.save(Card.of(name, rarity, cardNumber, expId));
         }
 
-        final var offer = Offer.of(expId, cardNumber, price, when);
-        offerRepository.save(offer);
+        var persisted = offerRepository.save(Offer.of(expId, cardNumber, price, when));
     }
 
     @Transactional(readOnly = true)
@@ -62,9 +56,30 @@ public class OfferApplicationService implements OfferService {
 
         return offerRepository.find(expId, num, f, t)
                 .stream()
-                .map(o -> new OfferPointDto(o.getListedAt(), o.getPrice().amount(), o.getPrice().currency()))
+                .map(o -> new OfferPointDto(
+                        o.getId(),
+                        o.getListedAt(),
+                        o.getPrice().amount(),
+                        o.getPrice().currency()))
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<OfferPointDto> getAll(Instant from, Instant to) {
+        final var f = from != null ? from : Instant.EPOCH;
+        final var t = to != null ? to : Instant.now();
+
+        return offerRepository.findAll(f, t).stream()
+                .map(o -> new OfferPointDto(
+                        o.getId(),
+                        o.getListedAt(),
+                        o.getPrice().amount(),
+                        o.getPrice().currency()
+                ))
+                .toList();
+    }
+
 
     @Transactional(readOnly = true)
     @Override
@@ -73,7 +88,11 @@ public class OfferApplicationService implements OfferService {
         final var num = new CardNumber(cardNumber);
 
         return offerRepository.findLast(expId, num)
-                .map(o -> new OfferPointDto(o.getListedAt(), o.getPrice().amount(), o.getPrice().currency()))
+                .map(o -> new OfferPointDto(
+                        o.getId(),
+                        o.getListedAt(),
+                        o.getPrice().amount(),
+                        o.getPrice().currency()))
                 .orElse(null);
     }
 
@@ -103,5 +122,40 @@ public class OfferApplicationService implements OfferService {
 
         var listedAt = (cmd != null) ? cmd.listedAt() : null;
         offerRepository.patch(offerId, money, listedAt);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<OfferPointDto> getOffersByCardName(String expExternalId, String cardName, Instant from, Instant to) {
+        final var expId = new ExpansionExternalId(expExternalId);
+        final var f = from != null ? from : Instant.EPOCH;
+        final var t = to != null ? to : Instant.now();
+
+        var cardIds = cardRepository.findIdsByExpansionAndName(expExternalId, cardName);
+        if (cardIds == null || cardIds.isEmpty()) {
+            return List.of();
+        }
+
+        CardNumber number;
+        {
+            var allCards = cardRepository.listByExpansion(expId, 0, Integer.MAX_VALUE);
+            var maybeCard = allCards.stream()
+                    .filter(c -> c.getNumber() != null && c.getName() != null &&
+                            c.getName().value().equals(cardName))
+                    .findFirst();
+            if (maybeCard.isEmpty()) {
+                return List.of();
+            }
+            number = maybeCard.get().getNumber();
+        }
+
+        return offerRepository.find(expId, number, f, t)
+                .stream()
+                .map(o -> new OfferPointDto(
+                        o.getId(),
+                        o.getListedAt(),
+                        o.getPrice().amount(),
+                        o.getPrice().currency()))
+                .toList();
     }
 }

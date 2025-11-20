@@ -21,6 +21,9 @@ public interface ExpansionJpaRepository extends JpaRepository<ExpansionEntity, L
     @Query("select e.id from ExpansionEntity e where e.name = :name")
     List<Long> findIdsByName(@Param("name") String name);
 
+    @Query("select e from ExpansionEntity e where e.name = :name")
+    Optional<ExpansionEntity> findByName(@Param("name") String name);
+
     @Modifying
     @Query("delete from ExpansionEntity e where e.id = :id")
     void deleteByIdExplicit(@Param("id") Long id);

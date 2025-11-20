@@ -2,6 +2,8 @@ package org.piotrowski.cardureadoo.infrastructure.persistence.jpa.mapper;
 
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.ObjectFactory;
 import org.piotrowski.cardureadoo.domain.model.Offer;
 import org.piotrowski.cardureadoo.domain.model.value.card.CardNumber;
@@ -29,9 +31,16 @@ public interface OfferMapper {
     }
 
     default Offer toDomain(OfferEntity e) {
-        var expId   = new ExpansionExternalId(e.getCard().getExpansion().getExternalId());
-        var number  = new CardNumber(e.getCard().getCardNumber());
-        var price   = Money.of(e.getPriceAmount(), e.getPriceCurrency());
-        var listed  = e.getListedAt();
-        return Offer.of(expId, number, price, listed);
-    }}
+        var expId  = new ExpansionExternalId(e.getCard().getExpansion().getExternalId());
+        var number = new CardNumber(e.getCard().getCardNumber());
+        var price  = Money.of(e.getPriceAmount(), e.getPriceCurrency());
+
+        return Offer.builder()
+                .id(e.getId())
+                .expansionId(expId)
+                .cardNumber(number)
+                .price(price)
+                .listedAt(e.getListedAt())
+                .build();
+    }
+}

@@ -11,6 +11,7 @@ import org.piotrowski.cardureadoo.domain.model.value.expansion.ExpansionName;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -43,6 +44,18 @@ public class ExpansionApplicationService implements ExpansionService {
         return expansionRepository.existsByExternalId(new ExpansionExternalId(externalId));
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public List<Expansion> findAll() {
+        return expansionRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Optional<Expansion> findByName(String expansionName) {
+        return expansionRepository.findByName(new ExpansionName(expansionName));
+    }
+
     @Override
     @Transactional
     public int deleteById(Long id) {
@@ -71,17 +84,20 @@ public class ExpansionApplicationService implements ExpansionService {
     @Override
     @Transactional
     public int deleteByName(String name) {
-        var expExternalIds = expansionRepository.findExternalIdsByName(name);
-        int total = 0;
-        for (var extId : expExternalIds) {
-            var ids = cardRepository.findIdsByExpansion(extId);
-            if (!ids.isEmpty()) {
-                offerRepository.deleteByCardIds(ids);
-                cardRepository.deleteByIds(ids);
-            }
-            total += expansionRepository.deleteByExternalId(extId);
+        var expOpt = expansionRepository.findByName(new ExpansionName(name));
+        if (expOpt.isEmpty()) {
+            return 0;
         }
-        return total;
+
+        var exp = expOpt.get();
+        var extId = exp.getId().value();
+
+        var cardIds = cardRepository.findIdsByExpansion(extId);
+        if (!cardIds.isEmpty()) {
+            offerRepository.deleteByCardIds(cardIds);
+            cardRepository.deleteByIds(cardIds);
+        }
+        return expansionRepository.deleteByExternalId(extId);
     }
 
     @Override

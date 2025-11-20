@@ -13,6 +13,7 @@ import java.util.Objects;
 @AllArgsConstructor(access = AccessLevel.PUBLIC)
 @NoArgsConstructor(access =  AccessLevel.PUBLIC)
 public final class Offer {
+    private Long id;
     private CardNumber cardNumber;
     private ExpansionExternalId expansionId;
     private Money price;
@@ -22,18 +23,34 @@ public final class Offer {
             ExpansionExternalId expansionId,
             CardNumber cardNumber,
             Money price,
-            Instant listedAt
-    ) {
+            Instant listedAt) {
         var when = (listedAt != null) ? listedAt : Instant.now();
         Objects.requireNonNull(expansionId, "expansionId");
         Objects.requireNonNull(cardNumber, "cardNumber");
         Objects.requireNonNull(price, "price");
 
         return  Offer.builder()
+                .id(null)
                 .expansionId(expansionId)
                 .cardNumber(cardNumber)
                 .price(price)
                 .listedAt(when)
+                .build();
+    }
+
+    public static Offer of(
+                            Long id,
+                           ExpansionExternalId expId,
+                           CardNumber num,
+                           Money price,
+                           Instant listedAt) {
+
+        return Offer.builder()
+                .id(id)
+                .expansionId(expId)
+                .cardNumber(num)
+                .price(price)
+                .listedAt(listedAt)
                 .build();
     }
 

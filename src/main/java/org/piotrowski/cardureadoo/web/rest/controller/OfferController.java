@@ -23,6 +23,7 @@ public class OfferController {
     private final OfferService offerService;
     private final OfferDtoMapper mapper;
 
+    // POST
     @PostMapping
     public ResponseEntity<Void> addOffer(@Valid @RequestBody AddOfferRequest req) {
         OfferService.AddOfferCommand cmd = mapper.toCommand(req);
@@ -31,6 +32,7 @@ public class OfferController {
         return ResponseEntity.created(URI.create("/api/offers")).build();
     }
 
+    // GETs
     @GetMapping
     public ResponseEntity<List<OfferPointResponse>> getOffers(
             @RequestParam("expId") @NotBlank String expExternalId,
@@ -41,6 +43,37 @@ public class OfferController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
     ) {
         var points = offerService.getOffers(expExternalId, cardNumber, from, to)
+                .stream()
+                .map(mapper::toResponse)
+                .toList();
+
+        return ResponseEntity.ok(points);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<OfferPointResponse>> getAllOffers(
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(value = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
+    ) {
+        var points = offerService.getAll(from, to).stream()
+                .map(mapper::toResponse)
+                .toList();
+
+        return ResponseEntity.ok(points);
+    }
+
+    @GetMapping("/by-card-name")
+    public ResponseEntity<List<OfferPointResponse>> getOffersByCardName(
+            @RequestParam("expId") @NotBlank String expExternalId,
+            @RequestParam("cardName") @NotBlank String cardName,
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(value = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
+    ) {
+        var points = offerService.getOffersByCardName(expExternalId, cardName, from, to)
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
@@ -71,21 +104,23 @@ public class OfferController {
         return ResponseEntity.ok(mapper.toResponse(stats));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteById(@PathVariable Long id) {
-        offerService.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping(path = "/{offerId}", consumes = "application/json")
-    public ResponseEntity<Void> patch(@PathVariable long offerId,
+    // PATCH
+    @PatchMapping(path = "/{id}", consumes = "application/json")
+    public ResponseEntity<Void> patch(@PathVariable long id,
                                       @RequestBody PatchOfferRequest req) {
         if (req == null || (req.amount() == null && req.currency() == null && req.listedAt() == null)) {
             return ResponseEntity.badRequest().build();
         }
-        offerService.patch(offerId, new OfferService.PatchOfferCommand(
+        offerService.patch(id, new OfferService.PatchOfferCommand(
                 req.amount(), req.currency(), req.listedAt()
         ));
+        return ResponseEntity.noContent().build();
+    }
+
+    // DELETE
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteById(@PathVariable Long id) {
+        offerService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }

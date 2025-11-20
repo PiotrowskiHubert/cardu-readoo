@@ -23,12 +23,17 @@ public class UserController {
     private final UserApplicationService usersService;
     private final UserJpaRepository userRepository;
 
+    // POST - create user
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public CreateUserResponse create(@RequestBody @Valid CreateUserRequest req) {
         Set<UserRole> roles = req.roles() == null ? null :
-                req.roles().stream().map(String::toUpperCase).map(UserRole::valueOf).collect(Collectors.toSet());
+                req.roles().stream()
+                        .map(String::toUpperCase)
+                        .map(UserRole::valueOf)
+                        .collect(Collectors.toSet());
+
         UserEntity u = usersService.createUser(req.username(), req.password(), roles);
         return new CreateUserResponse(u.getId(), u.getUsername(),
                 u.getRoles().stream().map(Enum::name).collect(Collectors.toSet()));

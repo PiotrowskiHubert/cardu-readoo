@@ -38,17 +38,21 @@ public class ExpansionJpaRepositoryAdapter implements ExpansionRepository {
         return mapper.toDomain(expansionJpa.save(entity));
     }
 
-    @Override public Optional<Expansion> findById(Long id) {
+    @Override
+    public Optional<Expansion> findById(Long id) {
         return expansionJpa.findById(id).map(mapper::toDomain);
     }
 
-    @Override public List<String> findExternalIdsByName(String name) {
-        return expansionJpa.findIdsByName(name).stream()
-                .map(Object::toString)
-                .toList();
+    @Override
+    public Optional<Expansion> findByName(ExpansionName name) {
+        return expansionJpa.findByName(name.value()).map(mapper::toDomain);
     }
 
-    @Override public int deleteById(Long id) { expansionJpa.deleteByIdExplicit(id); return 1; }
+    @Override
+    public int deleteById(Long id) {
+        expansionJpa.deleteByIdExplicit(id);
+        return 1;
+    }
 
     @Override public int deleteByExternalId(String externalId) { return expansionJpa.deleteByExternalId(externalId); }
 
@@ -61,5 +65,13 @@ public class ExpansionJpaRepositoryAdapter implements ExpansionRepository {
         if (name != null) {
             e.rename(name.value());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Expansion> findAll() {
+        return expansionJpa.findAll().stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }

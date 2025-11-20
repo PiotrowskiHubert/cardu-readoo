@@ -1,6 +1,5 @@
 package org.piotrowski.cardureadoo.application.port.in;
 
-import org.piotrowski.cardureadoo.application.service.OfferApplicationService;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -9,11 +8,19 @@ import java.util.List;
 
 public interface OfferService {
 
+    // C
     @Transactional
     void addOffer(AddOfferCommand cmd);
 
+    // R
     @Transactional(readOnly = true)
     List<OfferPointDto> getOffers(String expExternalId, String cardNumber, Instant from, Instant to);
+
+    @Transactional(readOnly = true)
+    List<OfferPointDto> getAll(Instant from, Instant to);
+
+    @Transactional(readOnly = true)
+    List<OfferPointDto> getOffersByCardName(String expExternalId, String cardName, Instant from, Instant to);
 
     @Transactional(readOnly = true)
     OfferPointDto getLast(String expExternalId, String cardNumber);
@@ -21,6 +28,7 @@ public interface OfferService {
     @Transactional(readOnly = true)
     OfferStatsDto getStats(String expExternalId, String cardNumber, Instant from, Instant to);
 
+    // D / partial update
     @Transactional
     void deleteById(Long id);
 
@@ -37,7 +45,24 @@ public interface OfferService {
             String cardName,
             String cardRarity
     ) {}
-    record PatchOfferCommand(BigDecimal amount, String currency, Instant listedAt) {}
-    record OfferPointDto(Instant listedAt, BigDecimal amount, String currency) {}
-    record OfferStatsDto(BigDecimal min, BigDecimal  max, BigDecimal avg, long count) {}
+
+    record PatchOfferCommand(
+            BigDecimal amount,
+            String currency,
+            Instant listedAt
+    ) {}
+
+    record OfferPointDto(
+            Long id,
+            Instant listedAt,
+            BigDecimal amount,
+            String currency
+    ) {}
+
+    record OfferStatsDto(
+            BigDecimal min,
+            BigDecimal  max,
+            BigDecimal avg,
+            long count
+    ) {}
 }

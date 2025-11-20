@@ -28,15 +28,26 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
 
     @Override
     @Transactional
-    public void save(Offer offer) {
+    public Offer save(Offer offer) {
         var card = cardJpa.findByExpansionExternalIdAndCardNumber(
-                    offer.getExpansionId().value(),
-                    offer.getCardNumber().value())
+                        offer.getExpansionId().value(),
+                        offer.getCardNumber().value())
                 .orElseThrow(() -> new IllegalStateException("Card not found for offer"));
 
         var entity = mapper.toEntity(offer, card);
         entity.referTo(card);
-        offerJpa.save(entity);
+        var saved = offerJpa.save(entity);
+        // Zwracamy domenowy obiekt z nadanym ID
+        return offer.toBuilder().id(saved.getId()).build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Offer> findAll(Instant from, Instant to) {
+        return offerJpa.findAll().stream()
+                .filter(e -> !e.getListedAt().isBefore(from) && !e.getListedAt().isAfter(to))
+                .map(mapper::toDomain)
+                .toList();
     }
 
     @Override
@@ -45,9 +56,7 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
         var cardId = cardJpa.findByExpansionExternalIdAndCardNumber(expId.value(), number.value())
                 .map(CardEntity::getId)
                 .orElseThrow(() -> new IllegalStateException("Card not found"));
-
-        return offerJpa
-                .findByCardIdAndListedAtBetweenOrderByListedAtAsc(cardId, from, to)
+        return offerJpa.findByCardIdAndListedAtBetweenOrderByListedAtAsc(cardId, from, to)
                 .stream().map(mapper::toDomain).toList();
     }
 
@@ -66,7 +75,6 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
         var cardId = cardJpa.findByExpansionExternalIdAndCardNumber(expId.value(), number.value())
                 .map(CardEntity::getId)
                 .orElseThrow(() -> new IllegalStateException("Card not found"));
-
         var p = offerJpa.statsForCardInRange(cardId, from, to);
         if (p == null || p.getCnt() == 0) {
             return new OfferStats(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0L);
@@ -81,11 +89,13 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
     }
 
     @Override
+    @Transactional
     public void deleteByCardId(Long cardId) {
         offerJpa.deleteByCardId(cardId);
     }
 
     @Override
+    @Transactional
     public void deleteByCardIds(List<Long> cardIds) {
         if (cardIds == null || cardIds.isEmpty()) return;
         offerJpa.deleteByCardIds(cardIds);
@@ -96,7 +106,6 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
     public void patch(long offerId, Money price, Instant listedAt) {
         var oe = offerJpa.findById(offerId)
                 .orElseThrow(() -> new IllegalStateException("Offer not found: " + offerId));
-
         if (price != null && price.amount() != null) {
             var currency = price.currency() != null ? price.currency() : oe.getPriceCurrency();
             oe.changePrice(price.amount(), currency);
