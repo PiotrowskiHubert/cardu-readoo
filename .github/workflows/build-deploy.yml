@@ -2,7 +2,7 @@ name: Build & Deploy cardu-readoo
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   workflow_dispatch: {}
 
 env:
