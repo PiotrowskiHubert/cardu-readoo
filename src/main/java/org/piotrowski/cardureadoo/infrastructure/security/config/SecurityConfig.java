@@ -16,9 +16,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -46,13 +46,9 @@ public class SecurityConfig {
         return username -> {
             UserEntity u = userRepository.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-            return new User(
-                    u.getUsername(),
-                    u.getPasswordHash(),
-                    u.getRoles().stream()
-                            .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
-                            .collect(Collectors.toSet())
-            );
+            return new User(u.getUsername(), u.getPasswordHash(), u.getRoles().stream()
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                    .collect(Collectors.toSet()));
         };
     }
 
@@ -83,7 +79,6 @@ public class SecurityConfig {
                         .frameOptions(f -> f.sameOrigin())
                 )
                 .authorizeHttpRequests(reg -> reg
-                        // statyczne (gdybyś kiedyś serwował front z Springa)
                         .requestMatchers(
                                 "/", "/index.html",
                                 "/favicon.ico",
@@ -91,40 +86,18 @@ public class SecurityConfig {
                                 "/*.js", "/*.css", "/*.map",
                                 "/robots.txt"
                         ).permitAll()
-
-                        // bootstrap admin – jedno strzałowe użycie
                         .requestMatchers(HttpMethod.POST, "/api/bootstrap/admin").permitAll()
-
-                        // CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // login – BEZ tokena
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-
-                        // swagger / docs
-                        .requestMatchers(
-                                "/docs", "/docs/**",
-                                "/api-docs", "/api-docs/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**"
-                        ).permitAll()
-
-                        // API "userowe"
+                        .requestMatchers("/docs", "/docs/**", "/api-docs", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("USER", "ADMIN")
-
-                        // admin panel
                         .requestMatchers("/api/users/**").hasRole(UserRole.ADMIN.name())
-
-                        // admin CRUD
                         .requestMatchers(HttpMethod.POST,   "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT,    "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PATCH,  "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.DELETE, "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
-
-                        // reszta – wymaga autentykacji
                         .anyRequest().authenticated()
                 );
-
         return http.build();
     }
 
