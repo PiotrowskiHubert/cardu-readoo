@@ -70,24 +70,10 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     }
 
     @Override
-    public List<Card> listAll(int page, int size) {
-        Pageable p = PageRequest.of(safePage(page), safeSize(size), Sort.by("name").ascending());
-        return cardJpa.findAll(p).map(mapper::toDomain).getContent();
-    }
-
-    @Override
     public List<Card> listByExpansion(ExpansionExternalId expId, int page, int size) {
         Pageable p = PageRequest.of(safePage(page), safeSize(size), Sort.by("cardNumber").ascending());
         return cardJpa
                 .findByExpansionExternalId(expId.value(), p)
-                .map(mapper::toDomain)
-                .getContent();
-    }
-
-    @Override
-    public List<Card> searchByName(String query, int page, int size) {
-        Pageable p = PageRequest.of(safePage(page), safeSize(size), Sort.by("name").ascending());
-        return cardJpa.findByNameContainingIgnoreCase(query, p)
                 .map(mapper::toDomain)
                 .getContent();
     }
@@ -108,14 +94,14 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     }
 
     @Override
-    public int deleteByIds(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) return 0;
-        return cardJpa.deleteByIds(ids);
+    public List<Long> findIdsByExpansion(String expExternalId) {
+        return cardJpa.findIdsByExpansionExternalId(expExternalId);
     }
 
     @Override
-    public List<Long> findIdsByExpansion(String expExternalId) {
-        return cardJpa.findIdsByExpansionExternalId(expExternalId);
+    public int deleteByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        return cardJpa.deleteByIds(ids);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package org.piotrowski.cardureadoo.application.service;
 
 import lombok.RequiredArgsConstructor;
+import org.piotrowski.cardureadoo.application.exception.expansion.ExpansionAlreadyExistsException;
 import org.piotrowski.cardureadoo.application.port.in.ExpansionService;
 import org.piotrowski.cardureadoo.application.port.out.CardRepository;
 import org.piotrowski.cardureadoo.application.port.out.ExpansionRepository;
@@ -8,6 +9,7 @@ import org.piotrowski.cardureadoo.application.port.out.OfferRepository;
 import org.piotrowski.cardureadoo.domain.model.Expansion;
 import org.piotrowski.cardureadoo.domain.model.value.expansion.ExpansionExternalId;
 import org.piotrowski.cardureadoo.domain.model.value.expansion.ExpansionName;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,24 +26,19 @@ public class ExpansionApplicationService implements ExpansionService {
 
     @Transactional
     @Override
-    public Expansion upsert(UpsertExpansionCommand cmd) {
+    public Expansion create(UpsertExpansionCommand cmd) {
         final var extId = new ExpansionExternalId(cmd.externalId());
-        final var name = new ExpansionName(cmd.name());
-        final var exp = new Expansion(extId, name);
+        final var name  = new ExpansionName(cmd.name());
+        final var exp   = new Expansion(extId, name);
 
-        return expansionRepository.save(exp);
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public Optional<Expansion> findByExternalId(String externalId) {
-        return expansionRepository.findByExternalId(new ExpansionExternalId(externalId));
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public boolean exists(String externalId) {
-        return expansionRepository.existsByExternalId(new ExpansionExternalId(externalId));
+        try {
+            return expansionRepository.save(exp);
+        } catch (DataIntegrityViolationException e) {
+            throw new ExpansionAlreadyExistsException(
+                    "Expansion already exists (name or externalId): " + cmd.name() + " / " + cmd.externalId(),
+                    e
+            );
+        }
     }
 
     @Transactional(readOnly = true)
@@ -72,21 +69,10 @@ public class ExpansionApplicationService implements ExpansionService {
 
     @Override
     @Transactional
-    public int deleteByExternalId(String externalId) {
-        var cardIds = cardRepository.findIdsByExpansion(externalId);
-        if (!cardIds.isEmpty()) {
-            offerRepository.deleteByCardIds(cardIds);
-            cardRepository.deleteByIds(cardIds);
-        }
-        return expansionRepository.deleteByExternalId(externalId);
-    }
-
-    @Override
-    @Transactional
-    public int deleteByName(String name) {
+    public boolean deleteByName(String name) {
         var expOpt = expansionRepository.findByName(new ExpansionName(name));
         if (expOpt.isEmpty()) {
-            return 0;
+            return false;
         }
 
         var exp = expOpt.get();
@@ -97,7 +83,9 @@ public class ExpansionApplicationService implements ExpansionService {
             offerRepository.deleteByCardIds(cardIds);
             cardRepository.deleteByIds(cardIds);
         }
-        return expansionRepository.deleteByExternalId(extId);
+
+        int removed = expansionRepository.deleteByExternalId(extId);
+        return removed > 0;
     }
 
     @Override

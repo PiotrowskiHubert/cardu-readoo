@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -30,20 +30,46 @@ public class OfferApplicationService implements OfferService {
 
     @Transactional
     @Override
-    public void addOffer(AddOfferCommand cmd) {
+    public long addOffer(AddOfferCommand cmd) {
+        if (cmd.expExternalId() == null || cmd.expExternalId().isBlank()) {
+            throw new IllegalArgumentException("expExternalId is required");
+        }
+        if (cmd.cardNumber() == null || cmd.cardNumber().isBlank()) {
+            throw new IllegalArgumentException("cardNumber is required");
+        }
+        if (cmd.amount() == null) {
+            throw new IllegalArgumentException("amount is required");
+        }
+
         final var expId = new ExpansionExternalId(cmd.expExternalId());
         final var cardNumber = new CardNumber(cmd.cardNumber());
-        final var when = cmd.listedAt() != null ? cmd.listedAt() : Instant.now();
-        final var currency = (cmd.currency() == null || cmd.currency().isBlank()) ? "PLN" : cmd.currency();
-        final var price = Money.of(new BigDecimal(cmd.amount()), currency);
+        final var when = (cmd.listedAt() != null) ? cmd.listedAt() : Instant.now();
+
+        final var currency = (cmd.currency() == null || cmd.currency().isBlank())
+                ? "PLN"
+                : cmd.currency().trim().toUpperCase(Locale.ROOT);
+
+        final BigDecimal amount;
+        try {
+            amount = new BigDecimal(cmd.amount());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("amount must be numeric", e);
+        }
+
+        final var price = Money.of(amount, currency);
         final var rarity = new CardRarity(cmd.cardRarity());
 
         if (!cardRepository.exists(expId, cardNumber)) {
-            final var name = cmd.cardName() != null ? new CardName(cmd.cardName()) : new CardName("UNKNOWN");
+            final var name = (cmd.cardName() != null && !cmd.cardName().isBlank())
+                    ? new CardName(cmd.cardName())
+                    : new CardName("UNKNOWN");
+
             cardRepository.save(Card.of(name, rarity, cardNumber, expId));
         }
 
         var persisted = offerRepository.save(Offer.of(expId, cardNumber, price, when));
+
+        return persisted.getId();
     }
 
     @Transactional(readOnly = true)

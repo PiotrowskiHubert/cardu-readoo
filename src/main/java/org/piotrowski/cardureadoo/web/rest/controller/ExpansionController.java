@@ -8,21 +8,28 @@ import org.piotrowski.cardureadoo.web.dto.expansion.ExpansionResponse;
 import org.piotrowski.cardureadoo.web.dto.expansion.PatchExpansionRequest;
 import org.piotrowski.cardureadoo.web.dto.expansion.UpsertExpansionRequest;
 import org.piotrowski.cardureadoo.application.port.in.ExpansionService.UpsertExpansionCommand;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
+
+
 @RestController
-@RequestMapping(value = "/api/expansions", produces = "application/json")
+@RequestMapping(value = "/api/expansions", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
 public class ExpansionController {
 
     private final ExpansionService expansionService;
 
-    // GETs
     @GetMapping
     public ResponseEntity<List<ExpansionResponse>> getAll() {
         var exps = expansionService.findAll();
@@ -32,45 +39,43 @@ public class ExpansionController {
         return ResponseEntity.ok(dtos);
     }
 
-    @GetMapping("/exists")
-    public ResponseEntity<Boolean> exists(@RequestParam @NotBlank String externalId) {
-        return ResponseEntity.ok(expansionService.exists(externalId));
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> create(@Valid @RequestBody UpsertExpansionRequest req) {
+
+        var created = expansionService.create(
+                new UpsertExpansionCommand(req.externalId(), req.name())
+        );
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{name}")
+                .buildAndExpand(created.getName().value())
+                .toUri();
+
+        return ResponseEntity.created(location).build();
     }
 
-    // POST
-    @PostMapping
-    public ResponseEntity<Void> upsert(@Valid @RequestBody UpsertExpansionRequest req) {
-        expansionService.upsert(new UpsertExpansionCommand(req.externalId(), req.name()));
-        return ResponseEntity.ok().build();
-    }
-
-    // PATCH
-    @PatchMapping(path = "/{externalId}", consumes = "application/json")
-    public ResponseEntity<Void> patch(@PathVariable String externalId,
+    @PatchMapping(path = "/{externalId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> patch(@PathVariable @NotBlank String externalId,
                                       @RequestBody PatchExpansionRequest req) {
         if (req == null || req.name() == null) {
-            return ResponseEntity.badRequest().build();
+            throw new ResponseStatusException(BAD_REQUEST, "Patch body is empty");
         }
-        expansionService.patch(externalId, new ExpansionService.PatchExpansionCommand(req.name()));
+
+        expansionService.patch(
+                externalId,
+                new ExpansionService.PatchExpansionCommand(req.name())
+        );
+
         return ResponseEntity.noContent().build();
     }
 
-    // DELETEs
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Integer> deleteById(@PathVariable Long id) {
-        int removed = expansionService.deleteById(id);
-        return ResponseEntity.ok(removed);
-    }
-
-    @DeleteMapping("/by-external/{externalId}")
-    public ResponseEntity<Integer> deleteByExternal(@PathVariable String externalId) {
-        int removed = expansionService.deleteByExternalId(externalId);
-        return ResponseEntity.ok(removed);
-    }
-
-    @DeleteMapping("/by-name/{name}")
-    public ResponseEntity<Integer> deleteByName(@PathVariable String name) {
-        int removed = expansionService.deleteByName(name);
-        return ResponseEntity.ok(removed);
+    @DeleteMapping("/{name}")
+    public ResponseEntity<Void> deleteByName(@PathVariable String name) {
+        boolean removed = expansionService.deleteByName(name);
+        if (!removed) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.noContent().build();
     }
 }

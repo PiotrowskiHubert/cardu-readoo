@@ -37,32 +37,8 @@ public class CardApplicationService implements CardService {
 
     @Transactional(readOnly = true)
     @Override
-    public Optional<Card> find(String expExternalId, String cardNumber) {
-        return cardRepository.find(new ExpansionExternalId(expExternalId), new CardNumber(cardNumber));
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public boolean exists(String expExternalId, String cardNumber) {
-        return cardRepository.exists(new ExpansionExternalId(expExternalId), new CardNumber(cardNumber));
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public List<Card> listAll(int page, int size) {
-        return cardRepository.listAll(page, size);
-    }
-
-    @Transactional(readOnly = true)
-    @Override
     public List<Card> listByExpansion(String expExternalId, int page, int size) {
         return cardRepository.listByExpansion(new ExpansionExternalId(expExternalId), page, size);
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public List<Card> searchByName(String query, int page, int size) {
-        return cardRepository.searchByName(query, page, size);
     }
 
     @Override
@@ -81,15 +57,6 @@ public class CardApplicationService implements CardService {
         offerRepository.deleteByCardId(id);
         cardRepository.deleteById(id);
         return 1;
-    }
-
-    @Override
-    @Transactional
-    public int deleteByExpansionAndName(String expExternalId, String cardName) {
-        var ids = cardRepository.findIdsByExpansionAndName(expExternalId, cardName);
-        if (ids.isEmpty()) return 0;
-        offerRepository.deleteByCardIds(ids);
-        return cardRepository.deleteByIds(ids);
     }
 
     @Override

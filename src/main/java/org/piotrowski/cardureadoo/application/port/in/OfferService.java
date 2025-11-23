@@ -8,11 +8,9 @@ import java.util.List;
 
 public interface OfferService {
 
-    // C
     @Transactional
-    void addOffer(AddOfferCommand cmd);
+    long addOffer(AddOfferCommand cmd);
 
-    // R
     @Transactional(readOnly = true)
     List<OfferPointDto> getOffers(String expExternalId, String cardNumber, Instant from, Instant to);
 
@@ -28,7 +26,6 @@ public interface OfferService {
     @Transactional(readOnly = true)
     OfferStatsDto getStats(String expExternalId, String cardNumber, Instant from, Instant to);
 
-    // D / partial update
     @Transactional
     void deleteById(Long id);
 

@@ -9,122 +9,105 @@ import org.piotrowski.cardureadoo.web.dto.card.CardDtoMapper;
 import org.piotrowski.cardureadoo.web.dto.card.CardResponse;
 import org.piotrowski.cardureadoo.web.dto.card.PatchCardRequest;
 import org.piotrowski.cardureadoo.web.dto.card.UpsertCardRequest;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+
 @RestController
-@RequestMapping(value = "/api/cards", produces = "application/json")
 @RequiredArgsConstructor
 @Validated
+@RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 public class CardController {
 
     private final CardService cardService;
     private final CardDtoMapper dto;
     private final ExpansionService expansionService;
 
-    // GETs
-    @GetMapping
-    public List<CardResponse> getAll(@RequestParam(defaultValue = "0") int page,
-                                     @RequestParam(defaultValue = "50") int size) {
-        return cardService.listAll(page, size).stream()
-                .map(dto::toResponse)
-                .toList();
-    }
-
-    @GetMapping("/by-expansion/{expExternalId}")
-    public List<CardResponse> getByExpansion(@PathVariable String expExternalId,
-                                             @RequestParam(defaultValue = "0") int page,
-                                             @RequestParam(defaultValue = "50") int size) {
-        return cardService.listByExpansion(expExternalId, page, size).stream()
-                .map(dto::toResponse)
-                .toList();
-    }
-
-    @GetMapping("/by-number")
-    public ResponseEntity<CardResponse> getByNumber(@RequestParam String expExternalId,
-                                                    @RequestParam String cardNumber) {
-        return cardService.find(expExternalId, cardNumber)
-                .map(dto::toResponse)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/search")
-    public List<CardResponse> searchByName(@RequestParam String name,
-                                           @RequestParam(defaultValue = "0") int page,
-                                           @RequestParam(defaultValue = "50") int size) {
-        return cardService.searchByName(name, page, size).stream()
-                .map(dto::toResponse)
-                .toList();
-    }
-
-    @GetMapping("/exists")
-    public ResponseEntity<Boolean> exists(@RequestParam("expExternalId") @NotBlank String expExternalId,
-                                          @RequestParam @NotBlank String cardNumber) {
-        return ResponseEntity.ok(cardService.exists(expExternalId, cardNumber));
-    }
-
-    @GetMapping("/by-expansion-name")
-    public List<CardResponse> getByExpansionName(@RequestParam("expansionName") String expansionName,
-                                                 @RequestParam(defaultValue = "0") int page,
-                                                 @RequestParam(defaultValue = "50") int size) {
+    @GetMapping("/api/cards")
+    public ResponseEntity<List<CardResponse>> getCards(
+            @RequestParam("expansionName") @NotBlank String expansionName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
         var expansionOpt = expansionService.findByName(expansionName);
-        var externalId = expansionOpt
-                .orElseThrow(() -> new IllegalArgumentException("Expansion not found: " + expansionName))
+        var expExternalId = expansionOpt
+                .orElseThrow(() -> new ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Expansion not found: " + expansionName
+                ))
                 .getId()
                 .value();
 
-        return cardService.listByExpansion(externalId, page, size).stream()
+        var cards = cardService.listByExpansion(expExternalId, page, size)
+                .stream()
                 .map(dto::toResponse)
                 .toList();
+
+        return ResponseEntity.ok(cards);
     }
 
-    // POST
-    @PostMapping
-    public ResponseEntity<Void> upsert(@Valid @RequestBody UpsertCardRequest req) {
+    @PostMapping(
+            value = "/api/expansions/{expExternalId}/cards",
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<Void> createCard(
+            @PathVariable @NotBlank String expExternalId,
+            @Valid @RequestBody UpsertCardRequest req
+    ) {
+        if (req.expExternalId() != null && !req.expExternalId().equals(expExternalId)) {
+            throw new ResponseStatusException(BAD_REQUEST, "expExternalId in body != path");
+        }
+
         cardService.save(new CardService.UpsertCardCommand(
-                req.expExternalId(),
+                expExternalId,
                 req.cardNumber(),
                 req.cardName(),
                 req.cardRarity()
         ));
-        return ResponseEntity.ok().build();
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{cardNumber}")
+                .buildAndExpand(req.cardNumber())
+                .toUri();
+
+        return ResponseEntity.created(location).build();
     }
 
-    // PATCH
-    @PatchMapping(path = "/{cardNumber}", consumes = "application/json")
-    public ResponseEntity<Void> patch(@RequestParam("expExternalId") String expExternalId,
-                                      @PathVariable String cardNumber,
-                                      @RequestBody PatchCardRequest req) {
+    @PatchMapping(
+            value = "/api/expansions/{expExternalId}/cards/{cardNumber}",
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<Void> patchCard(
+            @PathVariable @NotBlank String expExternalId,
+            @PathVariable @NotBlank String cardNumber,
+            @RequestBody PatchCardRequest req
+    ) {
         if (req == null || (req.name() == null && req.rarity() == null)) {
-            return ResponseEntity.badRequest().build();
+            throw new ResponseStatusException(BAD_REQUEST, "Patch body is empty");
         }
+
         cardService.patch(expExternalId, cardNumber,
-                new CardService.PatchCardCommand(req.name(), req.rarity()));
+                new CardService.PatchCardCommand(req.name(), req.rarity())
+        );
+
         return ResponseEntity.noContent().build();
     }
 
-    // DELETEs
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteById(@PathVariable Long id) {
-        cardService.deleteById(id);
+    @DeleteMapping("/api/expansions/{expExternalId}/cards/{cardNumber}")
+    public ResponseEntity<Void> deleteCard(
+            @PathVariable @NotBlank String expExternalId,
+            @PathVariable @NotBlank String cardNumber
+    ) {
+        cardService.deleteByExpansionAndNumber(expExternalId, cardNumber);
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/by-number")
-    public ResponseEntity<Integer> deleteByNumber(@RequestParam("expansion") String expExternalId,
-                                                  @RequestParam("number") String cardNumber) {
-        int removed = cardService.deleteByExpansionAndNumber(expExternalId, cardNumber);
-        return ResponseEntity.ok(removed);
-    }
-
-    @DeleteMapping("/by-name")
-    public ResponseEntity<Integer> deleteByName(@RequestParam("expansion") String expExternalId,
-                                                @RequestParam("name") String cardName) {
-        int removed = cardService.deleteByExpansionAndName(expExternalId, cardName);
-        return ResponseEntity.ok(removed);
-    }
 }

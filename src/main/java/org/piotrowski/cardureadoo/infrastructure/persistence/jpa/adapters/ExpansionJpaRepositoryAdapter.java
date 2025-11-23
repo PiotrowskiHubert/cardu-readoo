@@ -35,7 +35,9 @@ public class ExpansionJpaRepositoryAdapter implements ExpansionRepository {
     @Override
     public Expansion save(Expansion expansion) {
         var entity = mapper.toEntity(expansion);
-        return mapper.toDomain(expansionJpa.save(entity));
+        var saved = expansionJpa.save(entity);
+        expansionJpa.flush();
+        return mapper.toDomain(saved);
     }
 
     @Override
@@ -54,7 +56,9 @@ public class ExpansionJpaRepositoryAdapter implements ExpansionRepository {
         return 1;
     }
 
-    @Override public int deleteByExternalId(String externalId) { return expansionJpa.deleteByExternalId(externalId); }
+    @Override public int deleteByExternalId(String externalId) {
+        return expansionJpa.deleteByExternalId(externalId);
+    }
 
     @Override
     @Transactional
