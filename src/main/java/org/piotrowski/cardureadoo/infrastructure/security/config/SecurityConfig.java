@@ -14,7 +14,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
@@ -57,7 +59,7 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         Map<String, PasswordEncoder> enc = new HashMap<>();
-        enc.put("argon2", new Argon2PasswordEncoder(16, 32, 1, 1 << 14, 3));
+        enc.put("argon2", new Argon2PasswordEncoder(16,32,1,1<<14,3));
         enc.put("bcrypt", new BCryptPasswordEncoder(12));
         return new DelegatingPasswordEncoder("argon2", enc);
     }
@@ -81,7 +83,7 @@ public class SecurityConfig {
                         .frameOptions(f -> f.sameOrigin())
                 )
                 .authorizeHttpRequests(reg -> reg
-                        // statyczne (jeśli kiedyś backend serwuje front)
+                        // statyczne (gdybyś kiedyś serwował front z Springa)
                         .requestMatchers(
                                 "/", "/index.html",
                                 "/favicon.ico",
@@ -90,30 +92,36 @@ public class SecurityConfig {
                                 "/robots.txt"
                         ).permitAll()
 
-                        // bootstrap admin – po utworzeniu admina możesz to wyłączyć lub zostawić tylko na DEV
+                        // bootstrap admin – jedno strzałowe użycie
                         .requestMatchers(HttpMethod.POST, "/api/bootstrap/admin").permitAll()
 
-                        // preflight
+                        // CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // login JWT
+                        // login – BEZ tokena
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
 
-                        // swagger
-                        .requestMatchers("/docs", "/docs/**",
+                        // swagger / docs
+                        .requestMatchers(
+                                "/docs", "/docs/**",
                                 "/api-docs", "/api-docs/**",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**").permitAll()
+                                "/swagger-ui/**"
+                        ).permitAll()
 
-                        // reszta API wymaga roli
+                        // API "userowe"
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("USER", "ADMIN")
+
+                        // admin panel
                         .requestMatchers("/api/users/**").hasRole(UserRole.ADMIN.name())
+
+                        // admin CRUD
                         .requestMatchers(HttpMethod.POST,   "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT,    "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PATCH,  "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.DELETE, "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
 
-                        // cokolwiek innego – musi być zalogowane
+                        // reszta – wymaga autentykacji
                         .anyRequest().authenticated()
                 );
 
@@ -132,7 +140,13 @@ public class SecurityConfig {
             origins.add(val);
         }
 
-        configuration.setAllowedOrigins(origins);
+        // jeśli nic nie znaleziono w properties – fallback (żeby nie zabić ruchu)
+        if (origins.isEmpty()) {
+            configuration.addAllowedOriginPattern("*");
+        } else {
+            configuration.setAllowedOrigins(origins);
+        }
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
