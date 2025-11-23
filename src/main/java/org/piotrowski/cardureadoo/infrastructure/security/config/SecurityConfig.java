@@ -14,11 +14,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -46,16 +44,20 @@ public class SecurityConfig {
         return username -> {
             UserEntity u = userRepository.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-            return new User(u.getUsername(), u.getPasswordHash(), u.getRoles().stream()
-                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
-                    .collect(Collectors.toSet()));
+            return new User(
+                    u.getUsername(),
+                    u.getPasswordHash(),
+                    u.getRoles().stream()
+                            .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                            .collect(Collectors.toSet())
+            );
         };
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         Map<String, PasswordEncoder> enc = new HashMap<>();
-        enc.put("argon2", new Argon2PasswordEncoder(16,32,1,1<<14,3));
+        enc.put("argon2", new Argon2PasswordEncoder(16, 32, 1, 1 << 14, 3));
         enc.put("bcrypt", new BCryptPasswordEncoder(12));
         return new DelegatingPasswordEncoder("argon2", enc);
     }
@@ -79,6 +81,7 @@ public class SecurityConfig {
                         .frameOptions(f -> f.sameOrigin())
                 )
                 .authorizeHttpRequests(reg -> reg
+                        // statyczne (jeśli kiedyś backend serwuje front)
                         .requestMatchers(
                                 "/", "/index.html",
                                 "/favicon.ico",
@@ -87,26 +90,33 @@ public class SecurityConfig {
                                 "/robots.txt"
                         ).permitAll()
 
-                        // 🔹 1. Otwórz całą sekcję /api/auth/** – login + ewentualne inne endpointy auth
-                        .requestMatchers("/api/auth/**").permitAll()
-
+                        // bootstrap admin – po utworzeniu admina możesz to wyłączyć lub zostawić tylko na DEV
                         .requestMatchers(HttpMethod.POST, "/api/bootstrap/admin").permitAll()
+
+                        // preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 🔸 TO w zasadzie jest już nadmiarowe, ale może zostać:
+                        // login JWT
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
 
-                        .requestMatchers("/docs", "/docs/**", "/api-docs", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                        // swagger
+                        .requestMatchers("/docs", "/docs/**",
+                                "/api-docs", "/api-docs/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**").permitAll()
 
-                        // 🔐 dalej tak jak było – reszta /api/** wymaga roli
+                        // reszta API wymaga roli
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/users/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.POST,   "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT,    "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PATCH,  "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.DELETE, "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
+
+                        // cokolwiek innego – musi być zalogowane
                         .anyRequest().authenticated()
                 );
+
         return http.build();
     }
 
@@ -122,17 +132,10 @@ public class SecurityConfig {
             origins.add(val);
         }
 
-        // 🔹 2. Fallback – jak coś pójdzie nie tak z app.allowed.origin-* w Azure, nie blokuj wszystkiego "na twardo"
-        if (origins.isEmpty()) {
-            // Na czas debugowania; potem możesz to usunąć
-            origins = List.of("*");
-            configuration.setAllowCredentials(false); // "*" + credentials = błąd, więc tu je wyłączamy
-        }
-
         configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(configuration.getAllowedOrigins().contains("*") ? false : true);
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
