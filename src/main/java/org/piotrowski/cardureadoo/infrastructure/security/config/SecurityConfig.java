@@ -18,7 +18,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -86,10 +86,19 @@ public class SecurityConfig {
                                 "/*.js", "/*.css", "/*.map",
                                 "/robots.txt"
                         ).permitAll()
+
+                        // 🔹 1. Otwórz całą sekcję /api/auth/** – login + ewentualne inne endpointy auth
+                        .requestMatchers("/api/auth/**").permitAll()
+
                         .requestMatchers(HttpMethod.POST, "/api/bootstrap/admin").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 🔸 TO w zasadzie jest już nadmiarowe, ale może zostać:
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+
                         .requestMatchers("/docs", "/docs/**", "/api-docs", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+
+                        // 🔐 dalej tak jak było – reszta /api/** wymaga roli
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/users/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.POST,   "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
@@ -113,10 +122,17 @@ public class SecurityConfig {
             origins.add(val);
         }
 
+        // 🔹 2. Fallback – jak coś pójdzie nie tak z app.allowed.origin-* w Azure, nie blokuj wszystkiego "na twardo"
+        if (origins.isEmpty()) {
+            // Na czas debugowania; potem możesz to usunąć
+            origins = List.of("*");
+            configuration.setAllowCredentials(false); // "*" + credentials = błąd, więc tu je wyłączamy
+        }
+
         configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(configuration.getAllowedOrigins().contains("*") ? false : true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
