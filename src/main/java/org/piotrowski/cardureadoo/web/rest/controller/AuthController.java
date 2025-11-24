@@ -2,7 +2,10 @@ package org.piotrowski.cardureadoo.web.rest.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.piotrowski.cardureadoo.application.service.UserApplicationService;
 import org.piotrowski.cardureadoo.infrastructure.security.session.InMemoryTokenStore;
+import org.piotrowski.cardureadoo.web.dto.user.ChangePasswordRequest;
+import org.piotrowski.cardureadoo.web.dto.user.ChangePasswordResponse;
 import org.piotrowski.cardureadoo.web.dto.user.LoginRequest;
 import org.piotrowski.cardureadoo.web.dto.user.LoginResponse;
 import org.springframework.http.HttpStatus;
@@ -24,6 +27,7 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final InMemoryTokenStore tokenStore;
+    private final UserApplicationService userApplicationService;
 
     // POST - login endpoint
     @PostMapping("/login")
@@ -50,5 +54,12 @@ public class AuthController {
         } catch (BadCredentialsException ex) {
             throw ex;
         }
+    }
+
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.OK)
+    public ChangePasswordResponse resetPassword(@RequestBody @Valid ChangePasswordRequest request) {
+        userApplicationService.changePassword(request.username(), request.oldPassword(), request.newPassword());
+        return new ChangePasswordResponse(request.username());
     }
 }

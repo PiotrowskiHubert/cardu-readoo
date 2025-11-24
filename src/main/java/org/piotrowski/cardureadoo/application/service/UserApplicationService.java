@@ -27,4 +27,17 @@ public class UserApplicationService {
                 ? EnumSet.of(UserRole.USER) : EnumSet.copyOf(roles));
         return userRepository.save(user);
     }
+
+    @Transactional
+    public void changePassword(String username, String oldRawPassword, String newRawPassword) {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!passwordEncoder.matches(oldRawPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Old password does not match");
+        }
+
+        String newHash = passwordEncoder.encode(newRawPassword);
+        user.setPasswordHash(newHash);
+    }
 }

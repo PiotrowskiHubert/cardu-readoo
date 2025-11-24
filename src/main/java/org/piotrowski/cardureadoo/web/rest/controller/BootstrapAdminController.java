@@ -25,14 +25,14 @@ public class BootstrapAdminController {
     @Value("${app.security.bootstrap.token}")
     private String setupToken;
 
-    // POST - create first admin user
     @PostMapping(path = "/admin")
     @ResponseStatus(HttpStatus.CREATED)
     public CreateUserResponse createFirstAdmin(@RequestHeader("X-Setup-Token") String token,
                                                @RequestBody @Valid CreateUserRequest req) {
-        if (usersRepository.countByRolesContaining(UserRole.ADMIN) > 0) {
-            throw new IllegalStateException("Admin already exists");
-        }
+//        if (usersRepository.countByRolesContaining(UserRole.ADMIN) > 0) {
+//            throw new IllegalStateException("Admin already exists");
+//        }
+
         if (setupToken == null || setupToken.isBlank() || !setupToken.equals(token)) {
             throw new SecurityException("Invalid setup token");
         }

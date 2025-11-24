@@ -1,9 +1,9 @@
 package org.piotrowski.cardureadoo.infrastructure.persistence.jpa.entities;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.piotrowski.cardureadoo.domain.security.UserRole;
 
 import java.time.OffsetDateTime;
@@ -26,6 +26,7 @@ public class UserEntity {
     @Column(nullable = false, length = 50)
     private String username;
 
+    @Setter
     @Column(name="password_hash", nullable = false, length = 255)
     private String passwordHash;
 
