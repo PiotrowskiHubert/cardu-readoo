@@ -38,8 +38,14 @@ variable "app_image" {
   default = "ghcr.io/adrianrogalski/cardu-readoo:latest"
 }
 
+variable "mssql_url" {
+  description = "URL dla SQL"
+  type        = string
+  sensitive   = true
+}
+
 variable "mssql_sa_password" {
-  description = "Hasło SA dla SQL Edge"
+  description = "Hasło SA dla SQL"
   type        = string
   sensitive   = true
 }
@@ -97,6 +103,11 @@ resource "azurerm_container_app" "cardu" {
 
   # Sekrety
   secret {
+    name  = "db-url"
+    value = var.mssql_url
+  }
+  # Sekrety
+  secret {
     name  = "db-password"
     value = var.mssql_sa_password
   }
@@ -113,6 +124,11 @@ resource "azurerm_container_app" "cardu" {
       image  = var.app_image
       cpu    = 0.5
       memory = "1Gi"
+
+      env {
+        name  = "DB_URL"
+        value = "db-url"
+      }
 
       env {
         name  = "DB_USERNAME"
@@ -132,24 +148,6 @@ resource "azurerm_container_app" "cardu" {
       env {
         name        = "SETUP_TOKEN"
         secret_name = "setup-token"
-      }
-    }
-
-    # --- KONTENER SQL EDGE ---
-    container {
-      name   = "sqledge"
-      image  = "mcr.microsoft.com/azure-sql-edge"
-      cpu    = 0.5
-      memory = "1Gi"
-
-      env {
-        name  = "ACCEPT_EULA"
-        value = "1"
-      }
-
-      env {
-        name        = "MSSQL_SA_PASSWORD"
-        secret_name = "db-password"
       }
     }
   }
