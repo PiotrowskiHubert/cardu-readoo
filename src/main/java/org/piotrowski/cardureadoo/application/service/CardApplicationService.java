@@ -1,7 +1,9 @@
 package org.piotrowski.cardureadoo.application.service;
 
 import lombok.RequiredArgsConstructor;
+import org.piotrowski.cardureadoo.application.exception.web.ResourceNotFoundException;
 import org.piotrowski.cardureadoo.application.port.in.CardService;
+import org.piotrowski.cardureadoo.application.port.in.ExpansionService;
 import org.piotrowski.cardureadoo.application.port.out.CardRepository;
 import org.piotrowski.cardureadoo.application.port.out.OfferRepository;
 import org.piotrowski.cardureadoo.domain.model.Card;
@@ -13,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,11 +22,11 @@ public class CardApplicationService implements CardService {
 
     private final CardRepository cardRepository;
     private final OfferRepository offerRepository;
+    private final ExpansionService expansionService;
 
     @Transactional
     @Override
-    public Card save(UpsertCardCommand cmd) {
-
+    public Card create(CreateCardCommand cmd) {
         final var expId = new ExpansionExternalId(cmd.expExternalId());
         final var num = new CardNumber(cmd.cardNumber());
         final var name = new CardName(cmd.cardName());
@@ -37,26 +38,15 @@ public class CardApplicationService implements CardService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<Card> listByExpansion(String expExternalId, int page, int size) {
+    public List<Card> getByExpansionName(String expansionName, int page, int size) {
+        var expExternalIdOpt = expansionService.findByName(expansionName);
+
+        if (expExternalIdOpt.isEmpty()) {
+            throw new ResourceNotFoundException("Expansion not found: " + expansionName);
+        }
+        var expExternalId = expExternalIdOpt.get().getId().value();
+
         return cardRepository.listByExpansion(new ExpansionExternalId(expExternalId), page, size);
-    }
-
-    @Override
-    @Transactional
-    public void deleteById(Long id) {
-        offerRepository.deleteByCardId(id);
-        cardRepository.deleteById(id);
-    }
-
-    @Override
-    @Transactional
-    public int deleteByExpansionAndNumber(String expExternalId, String cardNumber) {
-        var idOpt = cardRepository.findIdByExpansionAndNumber(expExternalId, cardNumber);
-        if (idOpt.isEmpty()) return 0;
-        Long id = idOpt.get();
-        offerRepository.deleteByCardId(id);
-        cardRepository.deleteById(id);
-        return 1;
     }
 
     @Override
@@ -64,10 +54,36 @@ public class CardApplicationService implements CardService {
     public void patch(String expExternalId, String cardNumber, PatchCardCommand cmd) {
         var expId = new ExpansionExternalId(expExternalId);
         var num = new CardNumber(cardNumber);
-        var name = (cmd != null && cmd.cardName() != null) ? new CardName(cmd.cardName()) : null;
-        var rarity = (cmd != null && cmd.cardRarity() != null) ? new CardRarity(cmd.cardRarity()) : null;
+        var name = new CardName(cmd.cardName());
+        var rarity = new CardRarity(cmd.cardRarity());
 
         cardRepository.patch(expId, num, name, rarity);
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+        var cardOpt = cardRepository.findById(id);
+        if (cardOpt.isEmpty()) {
+            throw new ResourceNotFoundException("Card not found with id: " + id);
+        }
+
+        offerRepository.deleteByCardId(id);
+        cardRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void deleteByExpansionAndNumber(String expExternalId, String cardNumber) {
+        var cardIdOpt = cardRepository.findIdByExpansionAndNumber(expExternalId, cardNumber);
+        if (cardIdOpt.isEmpty()) {
+            throw new ResourceNotFoundException("Card not found with expansionExternalId: " + expExternalId + " and cardNumber: " + cardNumber);
+        }
+
+        var id = cardIdOpt.get();
+
+        offerRepository.deleteByCardId(id);
+        cardRepository.deleteById(id);
     }
 }
 

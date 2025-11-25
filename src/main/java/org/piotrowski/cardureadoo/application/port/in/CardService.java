@@ -8,20 +8,28 @@ import java.util.List;
 public interface CardService {
 
     @Transactional
-    Card save(UpsertCardCommand cmd);
+    Card create(CreateCardCommand cmd);
 
     @Transactional(readOnly = true)
-    List<Card> listByExpansion(String expExternalId, int page, int size);
+    List<Card> getByExpansionName(String expansionName, int page, int size);
 
     @Transactional
     void deleteById(Long id);
 
     @Transactional
-    int deleteByExpansionAndNumber(String expExternalId, String cardNumber);
+    void deleteByExpansionAndNumber(String expExternalId, String cardNumber);
 
     @Transactional
     void patch(String expExternalId, String cardNumber, PatchCardCommand cmd);
 
-    record UpsertCardCommand(String expExternalId, String cardNumber, String cardName, String cardRarity) {}
-    record PatchCardCommand(String cardName, String cardRarity) {}
+    record CreateCardCommand(
+            String expExternalId,
+            String cardNumber,
+            String cardName,
+            String cardRarity
+    ) {}
+    record PatchCardCommand(
+            String cardName,
+            String cardRarity
+    ) {}
 }

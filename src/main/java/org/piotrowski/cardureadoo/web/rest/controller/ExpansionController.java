@@ -6,20 +6,16 @@ import lombok.RequiredArgsConstructor;
 import org.piotrowski.cardureadoo.application.port.in.ExpansionService;
 import org.piotrowski.cardureadoo.web.dto.expansion.ExpansionResponse;
 import org.piotrowski.cardureadoo.web.dto.expansion.PatchExpansionRequest;
-import org.piotrowski.cardureadoo.web.dto.expansion.UpsertExpansionRequest;
-import org.piotrowski.cardureadoo.application.port.in.ExpansionService.UpsertExpansionCommand;
+import org.piotrowski.cardureadoo.web.dto.expansion.CreateExpansionRequest;
+import org.piotrowski.cardureadoo.application.port.in.ExpansionService.CreateExpansionCommand;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
-
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.CONFLICT;
 
 
 @RestController
@@ -33,17 +29,22 @@ public class ExpansionController {
     @GetMapping
     public ResponseEntity<List<ExpansionResponse>> getAll() {
         var exps = expansionService.findAll();
+
+//        if (exps.isEmpty()) {
+//            return ResponseEntity.noContent().build();
+//        }
+
         var dtos = exps.stream()
                 .map(e -> new ExpansionResponse(e.getId().value(), e.getName().value()))
                 .toList();
+
         return ResponseEntity.ok(dtos);
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> create(@Valid @RequestBody UpsertExpansionRequest req) {
-
+    public ResponseEntity<Void> create(@Valid @RequestBody CreateExpansionRequest req) {
         var created = expansionService.create(
-                new UpsertExpansionCommand(req.externalId(), req.name())
+                new CreateExpansionCommand(req.externalId(), req.name())
         );
 
         URI location = ServletUriComponentsBuilder
@@ -58,9 +59,6 @@ public class ExpansionController {
     @PatchMapping(path = "/{externalId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> patch(@PathVariable @NotBlank String externalId,
                                       @RequestBody PatchExpansionRequest req) {
-        if (req == null || req.name() == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "Patch body is empty");
-        }
 
         expansionService.patch(
                 externalId,
@@ -72,10 +70,7 @@ public class ExpansionController {
 
     @DeleteMapping("/{name}")
     public ResponseEntity<Void> deleteByName(@PathVariable String name) {
-        boolean removed = expansionService.deleteByName(name);
-        if (!removed) {
-            return ResponseEntity.notFound().build();
-        }
+        expansionService.deleteByName(name);
         return ResponseEntity.noContent().build();
     }
 }

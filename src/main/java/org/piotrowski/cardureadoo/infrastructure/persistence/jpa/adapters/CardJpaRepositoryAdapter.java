@@ -1,6 +1,7 @@
 package org.piotrowski.cardureadoo.infrastructure.persistence.jpa.adapters;
 
 import lombok.RequiredArgsConstructor;
+import org.piotrowski.cardureadoo.application.exception.web.ResourceNotFoundException;
 import org.piotrowski.cardureadoo.application.port.out.CardRepository;
 import org.piotrowski.cardureadoo.domain.model.Card;
 import org.piotrowski.cardureadoo.domain.model.value.card.CardName;
@@ -29,12 +30,42 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     private final CardMapper mapper;
 
     @Override
-    @Transactional(readOnly = true)
-    public Optional<Card> find(ExpansionExternalId expId, CardNumber number) {
-        return cardJpa
-                .findByExpansionExternalIdAndCardNumber(expId.value(), number.value())
-                .map(mapper::toDomain);
+    @Transactional
+    public Card save(Card card) {
+        var exp = expansionJpa.findByExternalId(card.getExpansionId().value())
+                .orElseThrow(() -> new ResourceNotFoundException("Expansion not found: " + card.getExpansionId().value()));
+
+        var existing = cardJpa.findByExpansionExternalIdAndCardNumber(
+                card.getExpansionId().value(),
+                card.getNumber().value()
+        );
+
+        if (!existing.isEmpty()) {
+            throw new DataIntegrityViolationException("Card already exists: " +
+                    card.getExpansionId().value() + " / " + card.getNumber().value());
+        }
+
+        try {
+            var entity  = mapper.toEntity(card);
+            entity.attachTo(exp);
+            cardJpa.save(entity);
+            var domain = mapper.toDomain(entity);
+            return domain;
+        } catch (DataIntegrityViolationException dup) {
+            return cardJpa.findByExpansionExternalIdAndCardNumber(
+                            card.getExpansionId().value(), card.getNumber().value())
+                    .map(mapper::toDomain)
+                    .orElseThrow(() -> dup);
+        }
     }
+
+//    @Override
+//    @Transactional(readOnly = true)
+//    public Optional<Card> find(ExpansionExternalId expId, CardNumber number) {
+//        return cardJpa
+//                .findByExpansionExternalIdAndCardNumber(expId.value(), number.value())
+//                .map(mapper::toDomain);
+//    }
 
     @Override
     @Transactional(readOnly = true)
@@ -43,30 +74,13 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     }
 
     @Override
-    @Transactional
-    public Card save(Card card) {
-        var exp = expansionJpa.findByExternalId(card.getExpansionId().value())
-                .orElseThrow(() -> new IllegalStateException("Expansion not found: " + card.getExpansionId().value()));
+    public Optional<Card> findById(Long id) {
+        return cardJpa.findById(id).map(mapper::toDomain);
+    }
 
-        var existing = cardJpa.findByExpansionExternalIdAndCardNumber(card.getExpansionId().value(), card.getNumber().value());
-
-        if (existing.isPresent()) {
-            var e = existing.get();
-            e.renameTo(card.getName().value());
-            e.changeRarityTo(card.getRarityCard().value());
-            return mapper.toDomain(cardJpa.save(e));
-        }
-
-        try {
-            var entity  = mapper.toEntity(card);
-            entity.attachTo(exp);
-            return mapper.toDomain(cardJpa.save(entity));
-        } catch (DataIntegrityViolationException dup) {
-            return cardJpa.findByExpansionExternalIdAndCardNumber(
-                            card.getExpansionId().value(), card.getNumber().value())
-                    .map(mapper::toDomain)
-                    .orElseThrow(() -> dup);
-        }
+    @Override
+    public List<Long> findIdsByExpansion(String expExternalId) {
+        return cardJpa.findIdsByExpansionExternalId(expExternalId);
     }
 
     @Override
@@ -79,11 +93,6 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     }
 
     @Override
-    public void deleteById(Long id) {
-        cardJpa.deleteById(id);
-    }
-
-    @Override
     public Optional<Long> findIdByExpansionAndNumber(String expExternalId, String cardNumber) {
         return cardJpa.findIdByExpansionExternalIdAndCardNumber(expExternalId, cardNumber);
     }
@@ -91,17 +100,6 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     @Override
     public List<Long> findIdsByExpansionAndName(String expExternalId, String cardName) {
         return cardJpa.findIdsByExpansionExternalIdAndName(expExternalId, cardName);
-    }
-
-    @Override
-    public List<Long> findIdsByExpansion(String expExternalId) {
-        return cardJpa.findIdsByExpansionExternalId(expExternalId);
-    }
-
-    @Override
-    public int deleteByIds(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) return 0;
-        return cardJpa.deleteByIds(ids);
     }
 
     @Override
@@ -117,6 +115,17 @@ public class CardJpaRepositoryAdapter implements CardRepository {
         if (cardRarirty != null) {
             ce.changeRarityTo(cardRarirty.value());
         }
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        cardJpa.deleteById(id);
+    }
+
+    @Override
+    public int deleteByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        return cardJpa.deleteByIds(ids);
     }
 
     private int safePage(int page) { return Math.max(0, page); }

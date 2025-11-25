@@ -4,22 +4,18 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.piotrowski.cardureadoo.application.port.in.CardService;
-import org.piotrowski.cardureadoo.application.port.in.ExpansionService;
 import org.piotrowski.cardureadoo.web.dto.card.CardDtoMapper;
 import org.piotrowski.cardureadoo.web.dto.card.CardResponse;
 import org.piotrowski.cardureadoo.web.dto.card.PatchCardRequest;
-import org.piotrowski.cardureadoo.web.dto.card.UpsertCardRequest;
+import org.piotrowski.cardureadoo.web.dto.card.CreateCardRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
-
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,51 +25,41 @@ public class CardController {
 
     private final CardService cardService;
     private final CardDtoMapper dto;
-    private final ExpansionService expansionService;
 
     @GetMapping("/api/cards")
-    public ResponseEntity<List<CardResponse>> getCards(
+    public ResponseEntity<List<CardResponse>> getCardsForExpansion(
             @RequestParam("expansionName") @NotBlank String expansionName,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size
-    ) {
-        var expansionOpt = expansionService.findByName(expansionName);
-        var expExternalId = expansionOpt
-                .orElseThrow(() -> new ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND,
-                        "Expansion not found: " + expansionName
-                ))
-                .getId()
-                .value();
+            @RequestParam(defaultValue = "50") int size) {
 
-        var cards = cardService.listByExpansion(expExternalId, page, size)
+        var cards = cardService.getByExpansionName(expansionName, page, size)
                 .stream()
                 .map(dto::toResponse)
                 .toList();
+
+//        if (cards.isEmpty()) {
+//            return ResponseEntity.noContent().build();
+//        }
 
         return ResponseEntity.ok(cards);
     }
 
     @PostMapping(
             value = "/api/expansions/{expExternalId}/cards",
-            consumes = MediaType.APPLICATION_JSON_VALUE
-    )
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> createCard(
             @PathVariable @NotBlank String expExternalId,
-            @Valid @RequestBody UpsertCardRequest req
-    ) {
-        if (req.expExternalId() != null && !req.expExternalId().equals(expExternalId)) {
-            throw new ResponseStatusException(BAD_REQUEST, "expExternalId in body != path");
-        }
+            @Valid @RequestBody CreateCardRequest req) {
 
-        cardService.save(new CardService.UpsertCardCommand(
+        cardService.create(new CardService.CreateCardCommand(
                 expExternalId,
                 req.cardNumber(),
                 req.cardName(),
                 req.cardRarity()
         ));
 
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
                 .path("/{cardNumber}")
                 .buildAndExpand(req.cardNumber())
                 .toUri();
@@ -83,16 +69,11 @@ public class CardController {
 
     @PatchMapping(
             value = "/api/expansions/{expExternalId}/cards/{cardNumber}",
-            consumes = MediaType.APPLICATION_JSON_VALUE
-    )
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> patchCard(
             @PathVariable @NotBlank String expExternalId,
             @PathVariable @NotBlank String cardNumber,
-            @RequestBody PatchCardRequest req
-    ) {
-        if (req == null || (req.name() == null && req.rarity() == null)) {
-            throw new ResponseStatusException(BAD_REQUEST, "Patch body is empty");
-        }
+            @RequestBody PatchCardRequest req) {
 
         cardService.patch(expExternalId, cardNumber,
                 new CardService.PatchCardCommand(req.name(), req.rarity())

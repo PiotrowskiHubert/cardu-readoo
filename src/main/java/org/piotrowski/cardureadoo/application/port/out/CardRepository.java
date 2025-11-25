@@ -12,22 +12,14 @@ import java.util.Optional;
 public interface CardRepository {
 
     Card save(Card card);
-
-    Optional<Card> find(ExpansionExternalId expId, CardNumber number);
-
+    Optional<Card> findById(Long id);
+//    Optional<Card> find(ExpansionExternalId expId, CardNumber number);
     boolean exists(ExpansionExternalId expId, CardNumber number);
-
     List<Card> listByExpansion(ExpansionExternalId expId, int page, int size);
-
     void deleteById(Long id);
-
     int deleteByIds(List<Long> ids);
-
     Optional<Long> findIdByExpansionAndNumber(String expExternalId, String cardNumber);
-
     List<Long> findIdsByExpansionAndName(String expExternalId, String cardName);
-
     List<Long> findIdsByExpansion(String expExternalId);
-
     void patch(ExpansionExternalId expId, CardNumber cardNumber, CardName cardName, CardRarity cardRarity);
 }

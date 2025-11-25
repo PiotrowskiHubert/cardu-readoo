@@ -2,6 +2,7 @@ package org.piotrowski.cardureadoo.application.service;
 
 import lombok.RequiredArgsConstructor;
 import org.piotrowski.cardureadoo.application.exception.expansion.ExpansionAlreadyExistsException;
+import org.piotrowski.cardureadoo.application.exception.web.ResourceNotFoundException;
 import org.piotrowski.cardureadoo.application.port.in.ExpansionService;
 import org.piotrowski.cardureadoo.application.port.out.CardRepository;
 import org.piotrowski.cardureadoo.application.port.out.ExpansionRepository;
@@ -26,53 +27,68 @@ public class ExpansionApplicationService implements ExpansionService {
 
     @Transactional
     @Override
-    public Expansion create(UpsertExpansionCommand cmd) {
+    public Expansion create(CreateExpansionCommand cmd) {
         final var extId = new ExpansionExternalId(cmd.externalId());
         final var name  = new ExpansionName(cmd.name());
         final var exp   = new Expansion(extId, name);
-
-        try {
-            return expansionRepository.save(exp);
-        } catch (DataIntegrityViolationException e) {
-            throw new ExpansionAlreadyExistsException(
-                    "Expansion already exists (name or externalId): " + cmd.name() + " / " + cmd.externalId(),
-                    e
-            );
-        }
+        return expansionRepository.save(exp);
     }
 
     @Transactional(readOnly = true)
     @Override
     public List<Expansion> findAll() {
-        return expansionRepository.findAll();
+        var expansions = expansionRepository.findAll();
+        return expansions;
     }
 
     @Transactional(readOnly = true)
     @Override
     public Optional<Expansion> findByName(String expansionName) {
-        return expansionRepository.findByName(new ExpansionName(expansionName));
-    }
+        var expOpt = expansionRepository.findByName(new ExpansionName(expansionName));
 
-    @Override
-    @Transactional
-    public int deleteById(Long id) {
-        var exp = expansionRepository.findById(id).orElse(null);
-        if (exp == null) return 0;
-
-        var cardIds = cardRepository.findIdsByExpansion(exp.getId().value());
-        if (!cardIds.isEmpty()) {
-            offerRepository.deleteByCardIds(cardIds);
-            cardRepository.deleteByIds(cardIds);
+        if (expOpt.isEmpty()) {
+            throw  new ResourceNotFoundException("Expansion not found: " + expansionName);
         }
-        return expansionRepository.deleteById(id);
+
+        return expOpt;
     }
 
     @Override
     @Transactional
-    public boolean deleteByName(String name) {
+    public void patch(String externalId, PatchExpansionCommand cmd) {
+        var id = new ExpansionExternalId(externalId);
+        var expName = new ExpansionName(cmd.name());
+        expansionRepository.patch(id, expName);
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+        var expOpt = expansionRepository.findById(id);
+        if (expOpt.isEmpty()) {
+            throw  new ResourceNotFoundException("Expansion with id " + id + " not found");
+        }
+
+        var exp = expOpt.get();
+        var extId = exp.getId().value();
+
+        var cardIds = cardRepository.findIdsByExpansion(extId);
+
+        if (cardIds.isEmpty()) {
+            throw   new ResourceNotFoundException("Card with id " + id + " not found");
+        }
+
+        offerRepository.deleteByCardIds(cardIds);
+        cardRepository.deleteByIds(cardIds);
+        expansionRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void deleteByName(String name) {
         var expOpt = expansionRepository.findByName(new ExpansionName(name));
         if (expOpt.isEmpty()) {
-            return false;
+            throw new ResourceNotFoundException("Expansion not found: " + name);
         }
 
         var exp = expOpt.get();
@@ -80,19 +96,11 @@ public class ExpansionApplicationService implements ExpansionService {
 
         var cardIds = cardRepository.findIdsByExpansion(extId);
         if (!cardIds.isEmpty()) {
-            offerRepository.deleteByCardIds(cardIds);
-            cardRepository.deleteByIds(cardIds);
+            throw new ResourceNotFoundException("Card not found: " + cardIds);
         }
 
-        int removed = expansionRepository.deleteByExternalId(extId);
-        return removed > 0;
-    }
-
-    @Override
-    @Transactional
-    public void patch(String externalId, PatchExpansionCommand cmd) {
-        var id = new ExpansionExternalId(externalId);
-        var name = cmd != null && cmd.name() != null ? new ExpansionName(cmd.name()) : null;
-        expansionRepository.patch(id, name);
+        offerRepository.deleteByCardIds(cardIds);
+        cardRepository.deleteByIds(cardIds);
+        expansionRepository.deleteByExternalId(extId);
     }
 }

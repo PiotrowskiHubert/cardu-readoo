@@ -13,8 +13,6 @@ public interface ExpansionJpaRepository extends JpaRepository<ExpansionEntity, L
 
     Optional<ExpansionEntity> findByExternalId(String externalId);
 
-    boolean existsByExternalId(String externalId);
-
     @Query("select e from ExpansionEntity e where e.name = :name")
     Optional<ExpansionEntity> findByName(@Param("name") String name);
 

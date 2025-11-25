@@ -70,6 +70,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
+                .httpBasic(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .headers(h -> h
@@ -86,12 +87,12 @@ public class SecurityConfig {
                                 "/*.js", "/*.css", "/*.map",
                                 "/robots.txt"
                         ).permitAll()
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bootstrap/admin").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                        .requestMatchers("/docs", "/docs/**", "/api-docs", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                        .requestMatchers("/docs", "/docs/**", "/api-docs", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
-//                        .requestMatchers("/api/users/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.POST,   "/api/expansions/**", "/api/cards/**", "/api/offers/**", "/api/auth/reset-password").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT,    "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PATCH,  "/api/expansions/**", "/api/cards/**", "/api/offers/**").hasRole(UserRole.ADMIN.name())
