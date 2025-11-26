@@ -1,6 +1,7 @@
 package org.piotrowski.cardureadoo.application.port.in;
 
-import org.piotrowski.cardureadoo.application.service.ExpansionApplicationService;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import org.piotrowski.cardureadoo.domain.model.Expansion;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,38 +10,30 @@ import java.util.Optional;
 
 public interface ExpansionService {
 
-    // C/U
     @Transactional
-    Expansion upsert(ExpansionApplicationService.UpsertExpansionCommand cmd);
-
-    // R
-    @Transactional(readOnly = true)
-    Optional<Expansion> findByExternalId(String externalId);
+    Expansion create(CreateExpansionCommand cmd);
 
     @Transactional(readOnly = true)
     Optional<Expansion> findByName(String expansionName);
 
     @Transactional(readOnly = true)
-    boolean exists(String externalId);
-
-    @Transactional(readOnly = true)
     List<Expansion> findAll();
 
-    // D
     @Transactional
-    int deleteById(Long id);
+    void deleteById(Long id);
 
     @Transactional
-    int deleteByExternalId(String externalId);
+    void deleteByName(String name);
 
-    @Transactional
-    int deleteByName(String name);
-
-    // partial update
     @Transactional
     void patch(String externalId, PatchExpansionCommand cmd);
 
-    // DTO/commands
-    record UpsertExpansionCommand(String externalId, String name) {}
-    record PatchExpansionCommand(String name) {}
+    record CreateExpansionCommand(
+            String externalId,
+            String name
+    ) {}
+
+    record PatchExpansionCommand(
+            String name
+    ) {}
 }

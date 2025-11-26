@@ -1,6 +1,7 @@
 package org.piotrowski.cardureadoo.infrastructure.persistence.jpa.adapters;
 
 import lombok.RequiredArgsConstructor;
+import org.piotrowski.cardureadoo.application.exception.web.ResourceNotFoundException;
 import org.piotrowski.cardureadoo.application.port.out.OfferRepository;
 import org.piotrowski.cardureadoo.domain.model.Offer;
 import org.piotrowski.cardureadoo.domain.model.value.card.CardNumber;
@@ -32,12 +33,12 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
         var card = cardJpa.findByExpansionExternalIdAndCardNumber(
                         offer.getExpansionId().value(),
                         offer.getCardNumber().value())
-                .orElseThrow(() -> new IllegalStateException("Card not found for offer"));
+                .orElseThrow(() -> new ResourceNotFoundException("Card not found with expId: " +
+                        offer.getExpansionId().value() + " and cardNumber: " + offer.getCardNumber().value()));
 
         var entity = mapper.toEntity(offer, card);
         entity.referTo(card);
         var saved = offerJpa.save(entity);
-        // Zwracamy domenowy obiekt z nadanym ID
         return offer.toBuilder().id(saved.getId()).build();
     }
 
@@ -55,9 +56,16 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
     public List<Offer> find(ExpansionExternalId expId, CardNumber number, Instant from, Instant to) {
         var cardId = cardJpa.findByExpansionExternalIdAndCardNumber(expId.value(), number.value())
                 .map(CardEntity::getId)
-                .orElseThrow(() -> new IllegalStateException("Card not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Card not found: " + expId.value() + " / " + number.value()));
         return offerJpa.findByCardIdAndListedAtBetweenOrderByListedAtAsc(cardId, from, to)
                 .stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    @Transactional (readOnly = true)
+    public Optional<Offer> findById(Long id) {
+        return offerJpa.findById(id)
+                .map(mapper::toDomain);
     }
 
     @Override
@@ -104,16 +112,9 @@ public class OfferJpaRepositoryAdapter implements OfferRepository {
     @Override
     @Transactional
     public void patch(long offerId, Money price, Instant listedAt) {
-        var oe = offerJpa.findById(offerId)
-                .orElseThrow(() -> new IllegalStateException("Offer not found: " + offerId));
-        if (price != null && price.amount() != null) {
-            var currency = price.currency() != null ? price.currency() : oe.getPriceCurrency();
-            oe.changePrice(price.amount(), currency);
-        } else if (price != null && price.currency() != null) {
-            oe.changePrice(oe.getPriceAmount(), price.currency());
-        }
-        if (listedAt != null) {
-            oe.rescheduleTo(listedAt);
-        }
+        var offerOpt = offerJpa.findById(offerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Offer not found: " + offerId));
+        offerOpt.changePrice(price.amount(), price.currency());
+        offerOpt.rescheduleTo(listedAt);
     }
 }

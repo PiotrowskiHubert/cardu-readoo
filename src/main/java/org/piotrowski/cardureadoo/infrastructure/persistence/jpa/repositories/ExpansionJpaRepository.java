@@ -13,14 +13,6 @@ public interface ExpansionJpaRepository extends JpaRepository<ExpansionEntity, L
 
     Optional<ExpansionEntity> findByExternalId(String externalId);
 
-    boolean existsByExternalId(String externalId);
-
-    @Query("select e.id from ExpansionEntity e where e.externalId = :externalId")
-    Optional<Long> findIdByExternalId(@Param("externalId") String externalId);
-
-    @Query("select e.id from ExpansionEntity e where e.name = :name")
-    List<Long> findIdsByName(@Param("name") String name);
-
     @Query("select e from ExpansionEntity e where e.name = :name")
     Optional<ExpansionEntity> findByName(@Param("name") String name);
 
@@ -28,11 +20,7 @@ public interface ExpansionJpaRepository extends JpaRepository<ExpansionEntity, L
     @Query("delete from ExpansionEntity e where e.id = :id")
     void deleteByIdExplicit(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from ExpansionEntity e where e.externalId = :externalId")
     int deleteByExternalId(@Param("externalId") String externalId);
-
-    @Modifying
-    @Query("delete from ExpansionEntity e where e.name = :name")
-    int deleteByName(@Param("name") String name);
 }

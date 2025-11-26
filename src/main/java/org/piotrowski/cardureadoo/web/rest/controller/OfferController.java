@@ -1,5 +1,11 @@
 package org.piotrowski.cardureadoo.web.rest.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -9,117 +15,106 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 
+import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
+
 @RestController
-@RequestMapping(value = "/api/offers", produces = "application/json")
+@RequestMapping(value = "/api/offers", produces = APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Offers", description = "Operations related to card offers")
 public class OfferController {
 
     private final OfferService offerService;
     private final OfferDtoMapper mapper;
 
-    // POST
-    @PostMapping
-    public ResponseEntity<Void> addOffer(@Valid @RequestBody AddOfferRequest req) {
-        OfferService.AddOfferCommand cmd = mapper.toCommand(req);
-        offerService.addOffer(cmd);
+    @PostMapping(consumes = APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create an offer", description = "Creates a new offer to sell a card.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Offer created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data or amount not numeric", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Related card or expansion not found", content = @Content)
+    })
+    public ResponseEntity<Void> createOffer(@Valid @RequestBody CreateOfferRequest req) {
+        long newId = offerService.create(new OfferService.CreateOfferCommand(
+                req.expExternalId(),
+                req.cardNumber(),
+                req.amount(),
+                req.currency(),
+                req.listedAt(),
+                req.cardName(),
+                req.cardRarity()
+        ));
 
-        return ResponseEntity.created(URI.create("/api/offers")).build();
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(newId)
+                .toUri();
+
+        return ResponseEntity.created(location).build();
     }
 
-    // GETs
     @GetMapping
-    public ResponseEntity<List<OfferPointResponse>> getOffers(
+    @Operation(summary = "Get offers for a card", description = "Returns a list of offer data points for a given card within an optional time range.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Offers returned successfully")
+    })
+    public ResponseEntity<List<OfferPointResponse>> getOffersForCard(
+            @Parameter(description = "External identifier of the expansion", required = true)
             @RequestParam("expId") @NotBlank String expExternalId,
-            @RequestParam("cardNumber") @NotBlank String cardNumber,
-            @RequestParam(value = "from", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(value = "to", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
-    ) {
-        var points = offerService.getOffers(expExternalId, cardNumber, from, to)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
-
-        return ResponseEntity.ok(points);
-    }
-
-    @GetMapping("/all")
-    public ResponseEntity<List<OfferPointResponse>> getAllOffers(
-            @RequestParam(value = "from", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(value = "to", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
-    ) {
-        var points = offerService.getAll(from, to).stream()
-                .map(mapper::toResponse)
-                .toList();
-
-        return ResponseEntity.ok(points);
-    }
-
-    @GetMapping("/by-card-name")
-    public ResponseEntity<List<OfferPointResponse>> getOffersByCardName(
-            @RequestParam("expId") @NotBlank String expExternalId,
+            @Parameter(description = "Name of the card", required = true)
             @RequestParam("cardName") @NotBlank String cardName,
-            @RequestParam(value = "from", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(value = "to", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
-    ) {
-        var points = offerService.getOffersByCardName(expExternalId, cardName, from, to)
+            @Parameter(description = "Start of the time range (optional)")
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @Parameter(description = "End of the time range (optional)")
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+
+        var offers = offerService.getOffersByCardName(expExternalId, cardName, from, to)
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
 
-        return ResponseEntity.ok(points);
-    }
-
-    @GetMapping("/last")
-    public ResponseEntity<OfferPointResponse> getLast(
-            @RequestParam("expId") @NotBlank String expExternalId,
-            @RequestParam("cardNumber") @NotBlank String cardNumber
-    ) {
-        var last = offerService.getLast(expExternalId, cardNumber);
-        return last == null ? ResponseEntity.notFound().build()
-                : ResponseEntity.ok(mapper.toResponse(last));
-    }
-
-    @GetMapping("/stats")
-    public ResponseEntity<OfferStatsResponse> getStats(
-            @RequestParam("expId") @NotBlank String expExternalId,
-            @RequestParam("cardNumber") @NotBlank String cardNumber,
-            @RequestParam(value = "from", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(value = "to", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
-    ) {
-        var stats = offerService.getStats(expExternalId, cardNumber, from, to);
-        return ResponseEntity.ok(mapper.toResponse(stats));
-    }
-
-    // PATCH
-    @PatchMapping(path = "/{id}", consumes = "application/json")
-    public ResponseEntity<Void> patch(@PathVariable long id,
-                                      @RequestBody PatchOfferRequest req) {
-        if (req == null || (req.amount() == null && req.currency() == null && req.listedAt() == null)) {
-            return ResponseEntity.badRequest().build();
+        if (offers.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
         }
+
+        return ResponseEntity.ok(offers);
+    }
+
+    @PatchMapping(path = "/{id}", consumes = APPLICATION_JSON_VALUE)
+    @Operation(summary = "Update an offer", description = "Partially updates an existing offer.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Offer updated successfully", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Offer not found", content = @Content)
+    })
+    public ResponseEntity<Void> patch(
+            @Parameter(description = "Identifier of the offer", required = true)
+            @PathVariable long id,
+            @Valid @RequestBody PatchOfferRequest req
+    ) {
         offerService.patch(id, new OfferService.PatchOfferCommand(
                 req.amount(), req.currency(), req.listedAt()
         ));
+
         return ResponseEntity.noContent().build();
     }
 
-    // DELETE
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteById(@PathVariable Long id) {
+    @Operation(summary = "Delete an offer", description = "Deletes an offer with the given identifier.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Offer deleted successfully", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Offer not found", content = @Content)
+    })
+    public ResponseEntity<Void> deleteById(
+            @Parameter(description = "Identifier of the offer", required = true)
+            @NotBlank @PathVariable long id) {
         offerService.deleteById(id);
         return ResponseEntity.noContent().build();
     }

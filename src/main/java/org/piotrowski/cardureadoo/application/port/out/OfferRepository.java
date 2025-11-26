@@ -12,28 +12,17 @@ import java.util.Optional;
 
 public interface OfferRepository {
 
-    // C/U
     Offer save(Offer offer);
-
-    // R
     List<Offer> find(ExpansionExternalId expId, CardNumber number, Instant from, Instant to);
-
+    Optional<Offer> findById(Long id);
     List<Offer> findAll(Instant from, Instant to);
-
     Optional<Offer> findLast(ExpansionExternalId expId, CardNumber number);
-
-    // D
-    void deleteById(Long id);
-
-    void deleteByCardId(Long cardId);
-
-    void deleteByCardIds(List<Long> cardIds);
-
-    // partial update
     void patch(long offerId, Money price, Instant listedAt);
+    void deleteById(Long id);
+    void deleteByCardId(Long cardId);
+    void deleteByCardIds(List<Long> cardIds);
 
     // stats
     OfferStats stats(ExpansionExternalId expId, CardNumber number, Instant from, Instant to);
-
     record OfferStats(BigDecimal min, BigDecimal max, BigDecimal avg, long count) {}
 }
