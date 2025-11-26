@@ -82,7 +82,7 @@ public class ExpansionController {
     })
     public ResponseEntity<Void> patch(
             @Parameter(description = "External identifier of the expansion", required = true)
-            @PathVariable @NotBlank String externalId,
+            @PathVariable String externalId,
             @Valid @RequestBody PatchExpansionRequest req) {
 
         expansionService.patch(
@@ -101,7 +101,7 @@ public class ExpansionController {
     })
     public ResponseEntity<Void> deleteByName(
             @Parameter(description = "Name of the expansion", required = true)
-            @NotBlank @PathVariable String name) {
+            @PathVariable String name) {
         expansionService.deleteByName(name);
         return ResponseEntity.noContent().build();
     }

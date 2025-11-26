@@ -21,12 +21,12 @@ public interface OfferService {
     void patch(long offerId, PatchOfferCommand cmd);
 
     @Transactional
-    void deleteById(Long id);
+    void deleteById(long id);
 
     record CreateOfferCommand(
             String expExternalId,
             String cardNumber,
-            String amount,
+            BigDecimal amount,
             String currency,
             Instant listedAt,
             String cardName,

@@ -110,11 +110,12 @@ public class OfferController {
     @Operation(summary = "Delete an offer", description = "Deletes an offer with the given identifier.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Offer deleted successfully", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content),
             @ApiResponse(responseCode = "404", description = "Offer not found", content = @Content)
     })
     public ResponseEntity<Void> deleteById(
             @Parameter(description = "Identifier of the offer", required = true)
-            @NotBlank @PathVariable long id) {
+            @PathVariable long id) {
         offerService.deleteById(id);
         return ResponseEntity.noContent().build();
     }

@@ -56,6 +56,9 @@ public class ExpansionApplicationService implements ExpansionService {
     @Override
     @Transactional
     public void patch(String externalId, PatchExpansionCommand cmd) {
+        if (externalId.isBlank()) {
+            throw new IllegalArgumentException("Expansion externalId cannot be empty or blank");
+        }
         var id = new ExpansionExternalId(externalId);
         var expName = new ExpansionName(cmd.name());
         expansionRepository.patch(id, expName);
@@ -86,6 +89,10 @@ public class ExpansionApplicationService implements ExpansionService {
     @Override
     @Transactional
     public void deleteByName(String name) {
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Expansion name cannot be empty or blank");
+        }
+
         var expOpt = expansionRepository.findByName(new ExpansionName(name));
         if (expOpt.isEmpty()) {
             throw new ResourceNotFoundException("Expansion not found: " + name);
