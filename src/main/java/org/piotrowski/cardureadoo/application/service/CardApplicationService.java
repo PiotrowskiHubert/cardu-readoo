@@ -38,7 +38,7 @@ public class CardApplicationService implements CardService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<Card> getByExpansionName(String expansionName, int page, int size) {
+    public List<Card> getByExpansionName(String expansionName) {
         var expExternalIdOpt = expansionService.findByName(expansionName);
 
         if (expExternalIdOpt.isEmpty()) {
@@ -46,7 +46,7 @@ public class CardApplicationService implements CardService {
         }
         var expExternalId = expExternalIdOpt.get().getId().value();
 
-        return cardRepository.listByExpansion(new ExpansionExternalId(expExternalId), page, size);
+        return cardRepository.listByExpansion(new ExpansionExternalId(expExternalId));
     }
 
     @Override
@@ -86,4 +86,3 @@ public class CardApplicationService implements CardService {
         cardRepository.deleteById(id);
     }
 }
-

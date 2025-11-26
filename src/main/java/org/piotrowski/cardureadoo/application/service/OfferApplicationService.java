@@ -6,11 +6,8 @@ import org.piotrowski.cardureadoo.application.port.in.OfferService;
 import org.piotrowski.cardureadoo.application.port.out.CardRepository;
 import org.piotrowski.cardureadoo.application.port.out.ExpansionRepository;
 import org.piotrowski.cardureadoo.application.port.out.OfferRepository;
-import org.piotrowski.cardureadoo.domain.model.Card;
 import org.piotrowski.cardureadoo.domain.model.Offer;
-import org.piotrowski.cardureadoo.domain.model.value.card.CardName;
 import org.piotrowski.cardureadoo.domain.model.value.card.CardNumber;
-import org.piotrowski.cardureadoo.domain.model.value.card.CardRarity;
 import org.piotrowski.cardureadoo.domain.model.value.expansion.ExpansionExternalId;
 import org.piotrowski.cardureadoo.domain.model.value.offer.Money;
 import org.springframework.stereotype.Service;
@@ -92,14 +89,9 @@ public class OfferApplicationService implements OfferService {
         final var f = from != null ? from : Instant.EPOCH;
         final var t = to != null ? to : Instant.now();
 
-//        var cardIds = cardRepository.findIdsByExpansionAndName(expExternalId, cardName);
-//        if (cardIds.isEmpty()) {
-//            return Collections.emptyList();
-//        }
-
         CardNumber number;
         {
-            var allCards = cardRepository.listByExpansion(expId, 0, Integer.MAX_VALUE);
+            var allCards = cardRepository.listByExpansion(expId);
 
             if (allCards.isEmpty()) {
                 return Collections.emptyList();

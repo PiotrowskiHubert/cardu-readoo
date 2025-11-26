@@ -11,7 +11,7 @@ public interface CardService {
     Card create(CreateCardCommand cmd);
 
     @Transactional(readOnly = true)
-    List<Card> getByExpansionName(String expansionName, int page, int size);
+    List<Card> getByExpansionName(String expansionName);
 
     @Transactional
     void deleteById(Long id);

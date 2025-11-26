@@ -22,7 +22,7 @@ public class UserApplicationService {
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already exists");
         }
-        String hash = passwordEncoder.encode(rawPassword); // Argon2
+        String hash = passwordEncoder.encode(rawPassword);
         UserEntity user = new UserEntity(username, hash, roles == null || roles.isEmpty()
                 ? EnumSet.of(UserRole.USER) : EnumSet.copyOf(roles));
         return userRepository.save(user);

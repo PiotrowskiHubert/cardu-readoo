@@ -15,7 +15,7 @@ public interface CardRepository {
     Optional<Card> findById(Long id);
 //    Optional<Card> find(ExpansionExternalId expId, CardNumber number);
     boolean exists(ExpansionExternalId expId, CardNumber number);
-    List<Card> listByExpansion(ExpansionExternalId expId, int page, int size);
+    List<Card> listByExpansion(ExpansionExternalId expId);
     void deleteById(Long id);
     int deleteByIds(List<Long> ids);
     Optional<Long> findIdByExpansionAndNumber(String expExternalId, String cardNumber);

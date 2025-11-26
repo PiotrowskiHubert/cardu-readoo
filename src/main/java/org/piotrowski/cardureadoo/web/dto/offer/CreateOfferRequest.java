@@ -8,7 +8,9 @@ import java.time.Instant;
 public record CreateOfferRequest(
         @NotBlank String expExternalId,
         @NotBlank String cardNumber,
-        @NotBlank String amount,
+        @NotBlank
+        @Pattern(regexp = "^[1-9][0-9]*$", message = "amount must be a positive integer greater than 0")
+        String amount,
         @Pattern(regexp = "^[A-Z]{3}$", message = "currency must be 3-letter ISO code")
         String currency,
         Instant listedAt,

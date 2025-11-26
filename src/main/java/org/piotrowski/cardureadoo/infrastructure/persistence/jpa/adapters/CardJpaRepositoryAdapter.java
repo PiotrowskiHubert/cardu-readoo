@@ -12,9 +12,6 @@ import org.piotrowski.cardureadoo.infrastructure.persistence.jpa.mapper.CardMapp
 import org.piotrowski.cardureadoo.infrastructure.persistence.jpa.repositories.CardJpaRepository;
 import org.piotrowski.cardureadoo.infrastructure.persistence.jpa.repositories.ExpansionJpaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,12 +82,12 @@ public class CardJpaRepositoryAdapter implements CardRepository {
     }
 
     @Override
-    public List<Card> listByExpansion(ExpansionExternalId expId, int page, int size) {
-        Pageable p = PageRequest.of(safePage(page), safeSize(size), Sort.by("cardNumber").ascending());
+    public List<Card> listByExpansion(ExpansionExternalId expId) {
         return cardJpa
-                .findByExpansionExternalId(expId.value(), p)
+                .findByExpansionExternalIdOrderByCardNumberAsc(expId.value())
+                .stream()
                 .map(mapper::toDomain)
-                .getContent();
+                .toList();
     }
 
     @Override
@@ -128,7 +125,4 @@ public class CardJpaRepositoryAdapter implements CardRepository {
         if (ids == null || ids.isEmpty()) return 0;
         return cardJpa.deleteByIds(ids);
     }
-
-    private int safePage(int page) { return Math.max(0, page); }
-    private int safeSize(int size) { return size <= 0 ? 50 : Math.min(size, 500); }
 }
