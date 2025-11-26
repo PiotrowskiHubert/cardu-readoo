@@ -96,11 +96,10 @@ public class ExpansionApplicationService implements ExpansionService {
 
         var cardIds = cardRepository.findIdsByExpansion(extId);
         if (!cardIds.isEmpty()) {
-            throw new ResourceNotFoundException("Card not found: " + cardIds);
+            offerRepository.deleteByCardIds(cardIds);
+            cardRepository.deleteByIds(cardIds);
         }
 
-        offerRepository.deleteByCardIds(cardIds);
-        cardRepository.deleteByIds(cardIds);
         expansionRepository.deleteByExternalId(extId);
     }
 }
