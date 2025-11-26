@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -30,13 +31,13 @@ public class ExpansionController {
     public ResponseEntity<List<ExpansionResponse>> getAll() {
         var exps = expansionService.findAll();
 
-//        if (exps.isEmpty()) {
-//            return ResponseEntity.noContent().build();
-//        }
-
         var dtos = exps.stream()
                 .map(e -> new ExpansionResponse(e.getId().value(), e.getName().value()))
                 .toList();
+
+        if (dtos.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
 
         return ResponseEntity.ok(dtos);
     }

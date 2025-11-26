@@ -75,7 +75,8 @@ public class CardJpaRepositoryAdapter implements CardRepository {
 
     @Override
     public Optional<Card> findById(Long id) {
-        return cardJpa.findById(id).map(mapper::toDomain);
+        return cardJpa.findById(id)
+                .map(mapper::toDomain);
     }
 
     @Override

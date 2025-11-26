@@ -9,36 +9,26 @@ import java.util.List;
 public interface OfferService {
 
     @Transactional
-    long addOffer(AddOfferCommand cmd);
+    long create(CreateOfferCommand cmd);
 
     @Transactional(readOnly = true)
     List<OfferPointDto> getOffers(String expExternalId, String cardNumber, Instant from, Instant to);
 
     @Transactional(readOnly = true)
-    List<OfferPointDto> getAll(Instant from, Instant to);
-
-    @Transactional(readOnly = true)
     List<OfferPointDto> getOffersByCardName(String expExternalId, String cardName, Instant from, Instant to);
-
-    @Transactional(readOnly = true)
-    OfferPointDto getLast(String expExternalId, String cardNumber);
-
-    @Transactional(readOnly = true)
-    OfferStatsDto getStats(String expExternalId, String cardNumber, Instant from, Instant to);
-
-    @Transactional
-    void deleteById(Long id);
 
     @Transactional
     void patch(long offerId, PatchOfferCommand cmd);
 
-    record AddOfferCommand(
+    @Transactional
+    void deleteById(Long id);
+
+    record CreateOfferCommand(
             String expExternalId,
             String cardNumber,
             String amount,
             String currency,
             Instant listedAt,
-//            Long userId
             String cardName,
             String cardRarity
     ) {}

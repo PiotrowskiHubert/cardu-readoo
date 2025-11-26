@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -25,24 +26,6 @@ public class CardController {
 
     private final CardService cardService;
     private final CardDtoMapper dto;
-
-    @GetMapping("/api/cards")
-    public ResponseEntity<List<CardResponse>> getCardsForExpansion(
-            @RequestParam("expansionName") @NotBlank String expansionName,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-
-        var cards = cardService.getByExpansionName(expansionName, page, size)
-                .stream()
-                .map(dto::toResponse)
-                .toList();
-
-//        if (cards.isEmpty()) {
-//            return ResponseEntity.noContent().build();
-//        }
-
-        return ResponseEntity.ok(cards);
-    }
 
     @PostMapping(
             value = "/api/expansions/{expExternalId}/cards",
@@ -67,6 +50,24 @@ public class CardController {
         return ResponseEntity.created(location).build();
     }
 
+    @GetMapping("/api/cards")
+    public ResponseEntity<List<CardResponse>> getCardsForExpansion(
+            @RequestParam("expansionName") @NotBlank String expansionName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        var cards = cardService.getByExpansionName(expansionName, page, size)
+                .stream()
+                .map(dto::toResponse)
+                .toList();
+
+        if (cards.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        return ResponseEntity.ok(cards);
+    }
+
     @PatchMapping(
             value = "/api/expansions/{expExternalId}/cards/{cardNumber}",
             consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -83,7 +84,7 @@ public class CardController {
     }
 
     @DeleteMapping("/api/expansions/{expExternalId}/cards/{cardNumber}")
-    public ResponseEntity<Void> deleteCard(
+    public ResponseEntity<Void> deleteByExpExternalIdAndNumber(
             @PathVariable @NotBlank String expExternalId,
             @PathVariable @NotBlank String cardNumber
     ) {

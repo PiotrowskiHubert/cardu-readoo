@@ -5,13 +5,13 @@ import jakarta.validation.constraints.Pattern;
 
 import java.time.Instant;
 
-public record AddOfferRequest(
+public record CreateOfferRequest(
         @NotBlank String expExternalId,
         @NotBlank String cardNumber,
         @NotBlank String amount,
         @Pattern(regexp = "^[A-Z]{3}$", message = "currency must be 3-letter ISO code")
         String currency,
         Instant listedAt,
-        String cardName,
-        String cardRarity
+        @NotBlank String cardName,
+        @NotBlank String cardRarity
 ) { }
