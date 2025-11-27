@@ -46,7 +46,7 @@ public class CardController {
     })
     public ResponseEntity<Void> createCard(
             @Parameter(description = "External identifier of the expansion", required = true)
-            @PathVariable @NotBlank String expExternalId,
+            @PathVariable String expExternalId,
             @Valid @RequestBody CreateCardRequest req) {
 
         cardService.create(new CardService.CreateCardCommand(
@@ -98,9 +98,9 @@ public class CardController {
     })
     public ResponseEntity<Void> patchCard(
             @Parameter(description = "External identifier of the expansion", required = true)
-            @PathVariable @NotBlank String expExternalId,
+            @PathVariable String expExternalId,
             @Parameter(description = "Card number within the expansion", required = true)
-            @PathVariable @NotBlank String cardNumber,
+            @PathVariable String cardNumber,
             @Valid @RequestBody PatchCardRequest req) {
 
         cardService.patch(expExternalId, cardNumber,
@@ -118,9 +118,9 @@ public class CardController {
     })
     public ResponseEntity<Void> deleteByExpExternalIdAndNumber(
             @Parameter(description = "External identifier of the expansion", required = true)
-            @PathVariable @NotBlank String expExternalId,
+            @PathVariable String expExternalId,
             @Parameter(description = "Card number within the expansion", required = true)
-            @PathVariable @NotBlank String cardNumber
+            @PathVariable String cardNumber
     ) {
         cardService.deleteByExpansionAndNumber(expExternalId, cardNumber);
         return ResponseEntity.noContent().build();

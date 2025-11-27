@@ -40,7 +40,8 @@ public class OfferApplicationService implements OfferService {
 
         final BigDecimal amount;
         try {
-            amount = new BigDecimal(cmd.amount());
+            amount = cmd.amount();
+//            amount = new BigDecimal(cmd.amount());
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("amount must be numeric", e);
         }
@@ -68,18 +69,6 @@ public class OfferApplicationService implements OfferService {
                         o.getPrice().amount(),
                         o.getPrice().currency()))
                 .toList();
-    }
-
-    @Override
-    @Transactional
-    public void patch(long offerId, PatchOfferCommand cmd) {
-        final var currency = (cmd.currency() == null || cmd.currency().isBlank())
-                ? "PLN" : cmd.currency().trim().toUpperCase(Locale.ROOT);
-
-        var price = Money.of(cmd.amount(), currency);
-        final var listedAt = (cmd.listedAt() != null) ? cmd.listedAt() : Instant.now();
-
-        offerRepository.patch(offerId, price, listedAt);
     }
 
     @Transactional(readOnly = true)
@@ -120,7 +109,23 @@ public class OfferApplicationService implements OfferService {
 
     @Override
     @Transactional
-    public void deleteById(Long id) {
+    public void patch(long offerId, PatchOfferCommand cmd) {
+        if (cmd.amount() == null) {
+            throw new IllegalArgumentException("Amount cannot be null");
+        }
+
+        final var currency = (cmd.currency() == null || cmd.currency().isBlank())
+                ? "PLN" : cmd.currency().trim().toUpperCase(Locale.ROOT);
+
+        var price = Money.of(cmd.amount(), currency);
+        final var listedAt = (cmd.listedAt() != null) ? cmd.listedAt() : Instant.now();
+
+        offerRepository.patch(offerId, price, listedAt);
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(long id) {
         var offerOpt = offerRepository.findById(id);
         if (offerOpt.isEmpty()) {
             throw new ResourceNotFoundException("Offer with id " + id + " not found");

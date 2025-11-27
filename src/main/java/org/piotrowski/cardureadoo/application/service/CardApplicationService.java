@@ -52,6 +52,10 @@ public class CardApplicationService implements CardService {
     @Override
     @Transactional
     public void patch(String expExternalId, String cardNumber, PatchCardCommand cmd) {
+        if (cardNumber.isBlank()) {
+            throw new IllegalArgumentException("cardNumber cannot be empty or blank");
+        }
+
         var expId = new ExpansionExternalId(expExternalId);
         var num = new CardNumber(cardNumber);
         var name = new CardName(cmd.cardName());
@@ -75,6 +79,10 @@ public class CardApplicationService implements CardService {
     @Override
     @Transactional
     public void deleteByExpansionAndNumber(String expExternalId, String cardNumber) {
+        if (expExternalId.isBlank() || cardNumber.isBlank()) {
+            throw new IllegalArgumentException("expansionExternalId and cardNumber cannot be empty or blank");
+        }
+
         var cardIdOpt = cardRepository.findIdByExpansionAndNumber(expExternalId, cardNumber);
         if (cardIdOpt.isEmpty()) {
             throw new ResourceNotFoundException("Card not found with expansionExternalId: " + expExternalId + " and cardNumber: " + cardNumber);

@@ -40,7 +40,7 @@ public class BootstrapAdminController {
             @ApiResponse(responseCode = "400", description = "Invalid setup token or input data", content = @Content)
     })
     public CreateUserResponse createFirstAdmin(
-            @Parameter(description = "Configuration token required to create the administrator once", required = true)
+            @Parameter(description = "Configuration token required to create the administrator", required = true)
             @RequestHeader("X-Setup-Token") String token,
             @RequestBody @Valid CreateUserRequest req) {
 
