@@ -114,7 +114,13 @@ public class SecurityConfig {
             origins.add(val);
         }
 
-        configuration.setAllowedOrigins(origins);
+        // jeśli nic nie znaleziono w properties – fallback (żeby nie zabić ruchu)
+        if (origins.isEmpty()) {
+            configuration.addAllowedOriginPattern("*");
+        } else {
+            configuration.setAllowedOrigins(origins);
+        }
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
